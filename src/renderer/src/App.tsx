@@ -1619,7 +1619,7 @@ function App(): JSX.Element {
   const defaultDirectory = activeRootPath ?? workspaceState.rootPath ?? "~";
 
   return (
-    <div className="bridge-app bridge-shell-exact" style={themeStyle}>
+    <div className="openspace-app openspace-shell-exact" style={themeStyle}>
       <div aria-hidden className="shell-background" />
 
       <header className="shell-topbar">

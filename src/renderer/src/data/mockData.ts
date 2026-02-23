@@ -58,8 +58,8 @@ export const FILE_TREE: FileNode[] = [
         kind: "folder",
         children: [
           { id: "file-app", name: "App.tsx", kind: "file", language: "tsx" },
-          { id: "file-shell-css", name: "bridge-space.css", kind: "file", language: "css" },
-          { id: "file-bridge", name: "openspaceBridge.ts", kind: "file", language: "ts" }
+          { id: "file-shell-css", name: "openspace.css", kind: "file", language: "css" },
+          { id: "file-renderer", name: "openspaceBridge.ts", kind: "file", language: "ts" }
         ]
       },
       {
@@ -91,8 +91,8 @@ export const DOCUMENTS: Record<string, EditorDocument> = {
 
 export const App = () => {
   return (
-    <section className="bridge-shell">
-      <h1>BridgeSpace Milestone {milestone}</h1>
+    <section className="openspace-shell">
+      <h1>OpenSpace Milestone {milestone}</h1>
     </section>
   );
 };
@@ -100,7 +100,7 @@ export const App = () => {
   },
   "file-shell-css": {
     fileId: "file-shell-css",
-    title: "bridge-space.css",
+    title: "openspace.css",
     language: "css",
     updatedAt: "08:36",
     content: `:root {
@@ -108,13 +108,13 @@ export const App = () => {
   --accent: #00d1ff;
 }
 
-.bridge-shell {
+.openspace-shell {
   color: var(--accent);
 }
 `
   },
-  "file-bridge": {
-    fileId: "file-bridge",
+  "file-renderer": {
+    fileId: "file-renderer",
     title: "openspaceBridge.ts",
     language: "ts",
     updatedAt: "08:41",
@@ -175,7 +175,7 @@ export const TIMELINE_EVENTS: CommandTimelineEvent[] = [
   {
     id: "evt-103",
     title: "Deploy preview",
-    detail: "bridge-ui-pr-301",
+    detail: "openspace-ui-pr-301",
     command: "npm run deploy:preview",
     timestamp: "09:04",
     status: "running"
@@ -236,7 +236,7 @@ export const KANBAN_CARDS: KanbanCard[] = [
     title: "Map templates to backend presets",
     owner: "Jules",
     lane: "in-review",
-    tags: ["templates", "bridge"],
+    tags: ["templates", "core"],
     priority: "p1"
   },
   {
@@ -252,7 +252,7 @@ export const KANBAN_CARDS: KanbanCard[] = [
 export const THEMES: ThemeDefinition[] = [
   {
     id: "cobalt-grid",
-    label: "BridgeMind",
+    label: "DeepMind",
     description: "Cool cyan energy with electric highlights.",
     kind: "dark",
     vars: {
