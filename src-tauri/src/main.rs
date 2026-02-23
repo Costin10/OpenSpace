@@ -30,6 +30,11 @@ struct AppState {
   sessions: Arc<Mutex<HashMap<String, TerminalSession>>>
 }
 
+#[derive(Clone, Default)]
+struct StartupContext {
+  root_path: Option<String>
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct TerminalCreateRequest {
@@ -157,6 +162,47 @@ fn resolve_path(input: &str) -> Result<PathBuf, String> {
   std::env::current_dir()
     .map(|cwd| cwd.join(candidate))
     .map_err(|error| io_error("failed to resolve relative path", error))
+}
+
+fn normalize_workspace_root(path: PathBuf) -> Result<PathBuf, String> {
+  if path.is_dir() {
+    return Ok(path);
+  }
+
+  if path.is_file() {
+    return path.parent().map(Path::to_path_buf).ok_or_else(|| {
+      format!(
+        "failed to determine workspace root for file path {}",
+        path.display()
+      )
+    });
+  }
+
+  Err(format!(
+    "startup path must be a file or directory: {}",
+    path.display()
+  ))
+}
+
+fn resolve_startup_root_from_args() -> Result<Option<String>, String> {
+  let argument = match std::env::args().nth(1) {
+    Some(value) if !value.trim().is_empty() => value,
+    _ => return Ok(None)
+  };
+
+  let resolved = resolve_path(&argument)?;
+  if !resolved.exists() {
+    return Err(format!(
+      "startup path does not exist: {}",
+      resolved.display()
+    ));
+  }
+
+  let root = normalize_workspace_root(resolved)?;
+  let canonical_root = fs::canonicalize(&root)
+    .map_err(|error| io_error("failed to canonicalize startup path", error))?;
+
+  Ok(Some(canonical_root.to_string_lossy().into_owned()))
 }
 
 fn modified_time_ms(metadata: &Metadata) -> u64 {
@@ -502,9 +548,34 @@ fn tasks_save(app: AppHandle, mut state: TaskState) -> Result<TaskState, String>
 }
 
 #[tauri::command]
-fn workspace_load(app: AppHandle) -> Result<WorkspaceState, String> {
+fn workspace_load(app: AppHandle, startup_context: State<'_, StartupContext>) -> Result<WorkspaceState, String> {
   let path = persistence_file_path(&app, WORKSPACE_FILE_NAME)?;
-  read_json_or_default(&path, default_workspace_state())
+  let mut state = read_json_or_default(&path, default_workspace_state())?;
+
+  if let Some(startup_root) = startup_context.root_path.as_ref() {
+    let mut next_recent_paths = vec![startup_root.clone()];
+    for recent_path in &state.recent_paths {
+      if recent_path != startup_root && !next_recent_paths.contains(recent_path) {
+        next_recent_paths.push(recent_path.clone());
+      }
+
+      if next_recent_paths.len() >= 6 {
+        break;
+      }
+    }
+
+    let should_update = state.root_path.as_deref() != Some(startup_root)
+      || state.recent_paths != next_recent_paths;
+
+    if should_update {
+      state.root_path = Some(startup_root.clone());
+      state.recent_paths = next_recent_paths;
+      state.updated_at = Utc::now().to_rfc3339();
+      write_json(&path, &state)?;
+    }
+  }
+
+  Ok(state)
 }
 
 #[tauri::command]
@@ -521,8 +592,19 @@ fn main() {
     std::process::exit(1);
   }
 
+  let startup_root_path = match resolve_startup_root_from_args() {
+    Ok(path) => path,
+    Err(message) => {
+      eprintln!("{message}");
+      None
+    }
+  };
+
   tauri::Builder::default()
     .manage(AppState::default())
+    .manage(StartupContext {
+      root_path: startup_root_path
+    })
     .invoke_handler(tauri::generate_handler![
       terminal_create,
       terminal_write,

@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "Linux-first Tauri v2 + React + TypeScript skeleton",
+  "bin": {
+    "openspace": "scripts/openspace"
+  },
   "scripts": {
     "dev": "tauri dev",
     "dev:web": "vite --config vite.config.ts",

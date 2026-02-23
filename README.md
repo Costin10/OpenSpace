@@ -76,6 +76,18 @@ npm install
 npm run dev
 ```
 
+### Launcher (`openspace .`)
+
+```bash
+npm install
+npm link
+openspace .
+```
+
+Notes:
+- The launcher accepts a file or directory path; files resolve to their parent directory as workspace root.
+- If `src-tauri/target/release/openspace` exists, the launcher runs it; otherwise it falls back to `cargo run`.
+
 ### Build
 
 ```bash

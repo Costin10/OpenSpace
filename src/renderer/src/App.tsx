@@ -176,7 +176,7 @@ const waitFor = (ms: number): Promise<void> =>
 const tabsFromWorkspaceState = (state: WorkspaceState): WorkspaceTab[] => {
   const sources = state.recentPaths.length > 0 ? state.recentPaths : state.rootPath ? [state.rootPath] : [];
   if (sources.length === 0) {
-    return WORKSPACE_TABS;
+    return [];
   }
 
   return sources.slice(0, 4).map((path, index) => {
@@ -323,47 +323,89 @@ const TemplatePickerModal = ({
   themeMap,
   onApply,
   onClose
-}: TemplatePickerModalProps): JSX.Element => (
-  <div className="modal-overlay" onClick={onClose} role="presentation">
-    <section
-      aria-modal
-      className="template-modal"
-      onClick={(event) => event.stopPropagation()}
-      role="dialog"
-    >
-      <header className="modal-header">
-        <h3>Template Picker</h3>
-        <button className="text-button" onClick={onClose} type="button">
-          Close
-        </button>
-      </header>
-      <p className="modal-subtitle">
-        Choose a BridgeSpace preset. If Tauri runtime is available, commands run through terminal IPC.
-      </p>
-      <div className="template-grid">
-        {templates.map((template) => (
-          <article className="template-card" key={template.id}>
-            <h4>{template.name}</h4>
-            <p>{template.description}</p>
-            <div className="template-meta">
-              <span>{template.defaultPanes} panes</span>
-              <span>{themeMap[template.suggestedThemeId] ?? template.suggestedThemeId}</span>
-              <span>{template.bootCommands.length} boot commands</span>
-            </div>
-            <div className="template-tags">
-              {template.categories.map((tag) => (
-                <span key={`${template.id}-${tag}`}>{tag}</span>
-              ))}
-            </div>
-            <button className="solid-button" onClick={() => onApply(template)} type="button">
-              Apply Template
+}: TemplatePickerModalProps): JSX.Element => {
+  const sortedTemplates = [...templates].sort((left, right) => left.defaultPanes - right.defaultPanes);
+  const [selectedTemplateId, setSelectedTemplateId] = useState(sortedTemplates[0]?.id ?? "");
+
+  const selectedTemplate =
+    sortedTemplates.find((template) => template.id === selectedTemplateId) ?? sortedTemplates[0] ?? templates[0];
+
+  return (
+    <div className="modal-overlay" onClick={onClose} role="presentation">
+      <section
+        aria-modal
+        className="template-modal new-workspace-modal"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+      >
+        <header className="modal-header">
+          <h3>New Workspace</h3>
+          <button className="text-button" onClick={onClose} type="button">
+            ×
+          </button>
+        </header>
+
+        <div className="modal-section">
+          <span className="section-label">Layout</span>
+          <div className="layout-picker-grid">
+            {sortedTemplates.map((template) => (
+              <button
+                className={`layout-tile ${selectedTemplate?.id === template.id ? "selected" : ""}`}
+                key={template.id}
+                onClick={() => setSelectedTemplateId(template.id)}
+                type="button"
+              >
+                <span className="layout-icon">▦</span>
+                <span>{template.defaultPanes}</span>
+              </button>
+            ))}
+          </div>
+          <p className="modal-hint">
+            {selectedTemplate?.defaultPanes ?? 1} panes | {themeMap[selectedTemplate?.suggestedThemeId ?? ""] ?? selectedTemplate?.suggestedThemeId}
+          </p>
+        </div>
+
+        <div className="modal-section">
+          <span className="section-label">Directory</span>
+          <div className="directory-row">
+            <span>~</span>
+            <button className="text-button" onClick={onClose} type="button">
+              Browse
             </button>
-          </article>
-        ))}
-      </div>
-    </section>
-  </div>
-);
+          </div>
+        </div>
+
+        <div className="modal-section agents-list">
+          <div className="agents-header">
+            <span className="section-label">AI Agents</span>
+            <span className="collapse-text">collapse</span>
+          </div>
+          {[
+            "Claude",
+            "Codex",
+            "Gemini",
+            "Cursor",
+            "OpenCode"
+          ].map((agent) => (
+            <div className="agent-row" key={agent}>
+              <span>{agent}</span>
+              <span className="agent-controls">− 0 +</span>
+            </div>
+          ))}
+        </div>
+
+        <footer className="modal-footer">
+          <button className="text-button" onClick={onClose} type="button">
+            Cancel
+          </button>
+          <button className="solid-button" onClick={() => selectedTemplate && onApply(selectedTemplate)} type="button">
+            Next
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
+};
 
 const codeEditorTheme = EditorView.theme(
   {
@@ -489,8 +531,8 @@ const CodeEditor = ({ language, onChange, value }: CodeEditorProps): JSX.Element
 };
 
 function App(): JSX.Element {
-  const [workspaceTabs, setWorkspaceTabs] = useState(WORKSPACE_TABS);
-  const [activeTabId, setActiveTabId] = useState(WORKSPACE_TABS[0]?.id ?? "");
+  const [workspaceTabs, setWorkspaceTabs] = useState<WorkspaceTab[]>([]);
+  const [activeTabId, setActiveTabId] = useState("");
   const [workspaceState, setWorkspaceState] = useState<WorkspaceState>(defaultWorkspaceState);
   const [fileTree, setFileTree] = useState(FILE_TREE);
   const [selectedFileId, setSelectedFileId] = useState("file-app");
@@ -580,10 +622,8 @@ function App(): JSX.Element {
         if (!isMounted) {
           return;
         }
-        if (entries.length > 0) {
-          setFileTree(mapFsEntriesToTree(loadedWorkspace.rootPath, entries));
-          setRuntimeNotice(`Loaded workspace: ${loadedWorkspace.rootPath}`);
-        }
+        setFileTree(mapFsEntriesToTree(loadedWorkspace.rootPath, entries));
+        setRuntimeNotice(`Loaded workspace: ${loadedWorkspace.rootPath}`);
       }
 
       const loadedCards = await rendererBridge.loadKanbanCards();
@@ -948,11 +988,7 @@ function App(): JSX.Element {
 
   const refreshTreeForRoot = async (rootPath: string): Promise<void> => {
     const entries = await rendererBridge.listFiles(rootPath);
-    if (entries.length > 0) {
-      setFileTree(mapFsEntriesToTree(rootPath, entries));
-    } else {
-      setFileTree(FILE_TREE);
-    }
+    setFileTree(mapFsEntriesToTree(rootPath, entries));
   };
 
   const handleTabSelect = (tabId: string): void => {
@@ -1104,6 +1140,22 @@ function App(): JSX.Element {
     setThemeId(template.suggestedThemeId);
     setTerminalPaneCount(paneCount);
     setTemplateModalOpen(false);
+
+    if (workspaceTabs.length === 0) {
+      const workspaceName = `Workspace ${new Date().getSeconds() % 99 || 1}`;
+      const workspaceId = `ws-${Date.now()}`;
+      const nextTab: WorkspaceTab = {
+        id: workspaceId,
+        name: workspaceName,
+        branch: "main",
+        health: "healthy",
+        changedFiles: 0,
+        rootPath: workspaceState.rootPath ?? undefined
+      };
+      setWorkspaceTabs([nextTab]);
+      setActiveTabId(workspaceId);
+    }
+
     appendTimeline("Apply template", template.name, `template:${template.id}`, "success");
 
     seedCommands.slice(0, paneCount).forEach((command, index) => {
@@ -1119,191 +1171,95 @@ function App(): JSX.Element {
   };
 
   return (
-    <div className="bridge-app" style={themeStyle}>
+    <div className="bridge-app bridge-shell-exact" style={themeStyle}>
       <div aria-hidden className="shell-background" />
-      <header className="panel top-bar">
-        <div className="tabs-row">
-          {workspaceTabs.map((tab) => (
-            <button
-              aria-label={`${tab.name} workspace tab`}
-              className={`workspace-tab ${activeTabId === tab.id ? "active" : ""}`}
-              key={tab.id}
-              onClick={() => handleTabSelect(tab.id)}
-              title={`${tab.branch} | ${HEALTH_LABELS[tab.health]}`}
-              type="button"
-            >
-              <span aria-hidden className={`health-dot ${tab.health}`} />
-              <span className="tab-title">{tab.name}</span>
-              <span className="tab-branch">{tab.branch}</span>
-              {tab.changedFiles > 0 ? <span className="tab-count">{tab.changedFiles}</span> : null}
+
+      <header className="shell-topbar">
+        <div className="topbar-left">
+          <div className="brand-mark" aria-hidden>
+            ⚡
+          </div>
+          <div className="workspace-strip">
+            {workspaceTabs.length === 0 ? (
+              <span className="no-workspaces">No workspaces open</span>
+            ) : (
+              workspaceTabs.map((tab) => (
+                <button
+                  aria-label={`${tab.name} workspace tab`}
+                  className={`workspace-pill ${activeTabId === tab.id ? "active" : ""}`}
+                  key={tab.id}
+                  onClick={() => handleTabSelect(tab.id)}
+                  title={`${tab.branch} | ${HEALTH_LABELS[tab.health]}`}
+                  type="button"
+                >
+                  <span className="pill-name">{tab.name}</span>
+                  {tab.changedFiles > 0 ? <span className="pill-count">{tab.changedFiles}</span> : null}
+                </button>
+              ))
+            )}
+            <button className="icon-button" onClick={() => setTemplateModalOpen(true)} type="button" title="New workspace">
+              +
             </button>
-          ))}
+          </div>
         </div>
-        <div className="top-controls">
-          <span className="runtime-chip">{runtimeNotice}</span>
-          <label className="control-field" htmlFor="theme-selector">
-            <span>Theme</span>
-            <select id="theme-selector" onChange={(event) => setThemeId(event.target.value)} value={themeId}>
-              {THEMES.map((theme) => (
-                <option key={theme.id} value={theme.id}>
-                  {theme.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button className="solid-button" onClick={() => setTemplateModalOpen(true)} type="button">
-            Templates
-          </button>
-        </div>
+        <button className="icon-button" type="button" title={runtimeNotice}>
+          ⚙
+        </button>
       </header>
 
-      <main className="workbench-grid">
-        <aside className="left-column">
-          <section className="panel panel-body tree-panel">
-            <PanelHeader title="File Tree" subtitle="Workspace structure and source files" />
-            <FileTree nodes={fileTree} onSelectFile={(node) => void handleSelectFile(node)} selectedFileId={selectedFileId} />
-          </section>
-
-          <section className="panel panel-body editor-panel">
-            <div className="editor-heading-row">
-              <PanelHeader
-                subtitle={`${selectedDocument?.language ?? selectedNode?.language ?? "txt"} | updated ${selectedDocument?.updatedAt ?? "n/a"}`}
-                title={selectedDocument?.title ?? selectedNode?.name ?? "Editor"}
-              />
-              <button className="solid-button compact" disabled={isSaving} onClick={() => void handleSaveFile()} type="button">
-                {isSaving ? "Saving..." : hasUnsavedChanges ? "Save*" : "Save"}
-              </button>
-            </div>
-            <CodeEditor
-              language={selectedDocument?.language ?? selectedNode?.language ?? "text"}
-              onChange={setEditorText}
-              value={editorText}
-            />
-          </section>
-        </aside>
-
-        <section className="panel panel-body terminal-panel">
-          <div className="panel-heading-row">
-            <PanelHeader subtitle="Configurable 1-16 panes wired for terminal IPC" title="Terminal Grid" />
-            <label className="pane-control" htmlFor="pane-slider">
-              <span>{terminalPaneCount} panes</span>
-              <input
-                id="pane-slider"
-                max={MAX_TERMINAL_PANES}
-                min={1}
-                onChange={(event) => handleTerminalCountChange(Number(event.target.value))}
-                type="range"
-                value={terminalPaneCount}
-              />
-            </label>
+      {workspaceTabs.length === 0 ? (
+        <section className="welcome-shell">
+          <div className="welcome-title-wrap">
+            <h1>OpenSpace</h1>
+            <p>Build The Future.</p>
           </div>
-          <div className="terminal-grid" style={{ gridTemplateColumns: `repeat(${terminalColumns}, minmax(0, 1fr))` }}>
+
+          <div className="welcome-actions">
+            <button className="solid-button" onClick={() => setTemplateModalOpen(true)} type="button">
+              ↳ New Workspace
+            </button>
+            <button className="text-button" onClick={() => setTemplateModalOpen(true)} type="button">
+              ☐ Open Folder
+            </button>
+          </div>
+
+          <div className="shortcut-card">
+            <header>
+              <span>⌨ Keyboard Shortcuts</span>
+            </header>
+            <div className="shortcut-grid">
+              <span>New Workspace</span>
+              <kbd>⌘T</kbd>
+              <span>Navigate Panes</span>
+              <kbd>⌘] / ⌘[</kbd>
+              <span>New Terminal</span>
+              <kbd>⌘N</kbd>
+              <span>Quick Open File</span>
+              <kbd>⌘P</kbd>
+              <span>Search Terminal</span>
+              <kbd>⌘F</kbd>
+              <span>Settings</span>
+              <kbd>⌘,</kbd>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <main className="workspace-main">
+          <div className="terminal-grid terminal-grid-exact" style={{ gridTemplateColumns: `repeat(${terminalColumns}, minmax(0, 1fr))` }}>
             {visibleTerminals.map((pane) => (
-              <article className={`terminal-card ${pane.status}`} key={pane.id}>
+              <article className={`terminal-card exact-pane ${pane.status}`} key={pane.id}>
                 <header>
-                  <span>{pane.label}</span>
+                  <span className="pane-name">{pane.label}</span>
                   <span className={`status-pill ${pane.status}`}>{pane.status}</span>
                 </header>
-                <p className="terminal-command">{pane.sessionId ? `session ${pane.sessionId}` : "starting session..."}</p>
-                <p className="terminal-output">{pane.outputPreview}</p>
                 <div className="terminal-host" ref={getTerminalHostRef(pane.id)} />
-                <form
-                  className="pane-command-form"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void handleRunPaneCommand(pane.id);
-                  }}
-                >
-                  <input
-                    className="pane-command-input"
-                    onChange={(event) => handlePaneCommandChange(pane.id, event.target.value)}
-                    placeholder="Type command (example: npm run test)"
-                    spellCheck={false}
-                    value={pane.command}
-                  />
-                  <button className="text-button" type="submit">
-                    Run
-                  </button>
-                </form>
+                <p className="terminal-command">{pane.command}</p>
+                <p className="terminal-output">{pane.outputPreview}</p>
               </article>
             ))}
           </div>
-        </section>
-
-        <aside className="panel panel-body timeline-panel">
-          <PanelHeader title="Command Blocks" subtitle="Commands executed from pane inputs" />
-          <ul className="timeline-list">
-            {timelineEvents.length === 0 ? (
-              <li className="timeline-empty">Run any pane command to populate command history.</li>
-            ) : (
-              timelineEvents.map((event) => (
-                <li className={`timeline-item ${event.status}`} key={event.id}>
-                  <div className="timeline-item-head">
-                    <strong>{event.title}</strong>
-                    <time>{event.timestamp}</time>
-                  </div>
-                  <p>{event.detail}</p>
-                  <p className="timeline-command">{event.command}</p>
-                </li>
-              ))
-            )}
-          </ul>
-        </aside>
-      </main>
-
-      <section className="panel panel-body board-panel">
-        <PanelHeader title="Kanban Board" subtitle="Todo | In Progress | In Review | Complete" />
-        <div className="board-grid">
-          {LANE_ORDER.map((lane) => {
-            const cards = kanbanCards.filter((card) => card.lane === lane);
-            return (
-              <section
-                className="lane"
-                key={lane}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={() => {
-                  if (draggingCardId) {
-                    moveCard(draggingCardId, lane);
-                    setDraggingCardId(null);
-                  }
-                }}
-              >
-                <header className="lane-header">
-                  <h3>{LANE_LABELS[lane]}</h3>
-                  <span>{cards.length}</span>
-                </header>
-                <div className="lane-cards">
-                  {cards.map((card) => (
-                    <article
-                      className="kanban-card"
-                      draggable
-                      key={card.id}
-                      onDragEnd={() => setDraggingCardId(null)}
-                      onDragStart={() => setDraggingCardId(card.id)}
-                    >
-                      <header>
-                        <h4>{card.title}</h4>
-                        <span className={`priority ${card.priority}`}>{PRIORITY_LABELS[card.priority]}</span>
-                      </header>
-                      <p>{card.owner}</p>
-                      <div className="tags-row">
-                        {card.tags.map((tag) => (
-                          <span key={`${card.id}-${tag}`}>{tag}</span>
-                        ))}
-                      </div>
-                      {card.lane !== "complete" ? (
-                        <button className="text-button" onClick={() => moveCard(card.id, nextLaneFor(card.lane))} type="button">
-                          Advance
-                        </button>
-                      ) : null}
-                    </article>
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </div>
-      </section>
+        </main>
+      )}
 
       {isTemplateModalOpen ? (
         <TemplatePickerModal
