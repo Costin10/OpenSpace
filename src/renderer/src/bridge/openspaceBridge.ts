@@ -3,9 +3,13 @@ import type {
   FsReadResponse,
   TaskRecord,
   TaskState,
+  TerminalCreateRequest,
   TerminalCreateResponse,
   TerminalExitEvent,
+  TerminalKillRequest,
   TerminalOutputEvent,
+  TerminalResizeRequest,
+  TerminalWriteRequest,
   WorkspaceState
 } from "@shared/ipc";
 import type { KanbanCard } from "../types/ui";
@@ -19,6 +23,8 @@ type ListenEvent<T> = {
   payload: T;
 };
 type ListenFn = <T>(event: string, handler: (event: ListenEvent<T>) => void) => Promise<UnlistenFn>;
+type TerminalOutputListener = (payload: TerminalOutputEvent) => void;
+type TerminalExitListener = (payload: TerminalExitEvent) => void;
 
 const TAURI_MODULES = {
   core: "@tauri-apps/api/core",
@@ -196,6 +202,8 @@ const invokeWithFallbacks = async <T>(
 const toRecord = (value: object): Record<string, unknown> => value as Record<string, unknown>;
 
 const terminalOutputBySession = new Map<string, string>();
+const terminalOutputListeners = new Set<TerminalOutputListener>();
+const terminalExitListeners = new Set<TerminalExitListener>();
 let terminalEventUnlisteners: UnlistenFn[] = [];
 let terminalEventsReady = false;
 let terminalEventsSetupPromise: Promise<void> | null = null;
@@ -215,10 +223,24 @@ const appendTerminalOutput = (payload: TerminalOutputEvent): void => {
   const current = terminalOutputBySession.get(payload.sessionId) ?? "";
   const combined = `${current}${payload.data}`;
   terminalOutputBySession.set(payload.sessionId, combined.slice(-8000));
+  for (const listener of terminalOutputListeners) {
+    try {
+      listener(payload);
+    } catch (error) {
+      console.error("terminal output listener failed", error);
+    }
+  }
 };
 
 const handleTerminalExit = (payload: TerminalExitEvent): void => {
   terminalOutputBySession.delete(payload.sessionId);
+  for (const listener of terminalExitListeners) {
+    try {
+      listener(payload);
+    } catch (error) {
+      console.error("terminal exit listener failed", error);
+    }
+  }
 };
 
 const ensureTerminalEvents = async (): Promise<void> => {
@@ -283,6 +305,13 @@ export interface RendererBridge {
   listFiles: (path: string) => Promise<FilesystemEntry[]>;
   readFile: (path: string) => Promise<FsReadResponse | null>;
   writeFile: (path: string, content: string) => Promise<void>;
+  createTerminal: (request?: TerminalCreateRequest) => Promise<string>;
+  writeTerminal: (sessionId: string, data: string) => Promise<void>;
+  resizeTerminal: (sessionId: string, cols: number, rows: number) => Promise<void>;
+  killTerminal: (sessionId: string, signal?: string) => Promise<void>;
+  listTerminalSessions: () => Promise<string[]>;
+  onTerminalOutput: (listener: TerminalOutputListener) => Promise<UnlistenFn>;
+  onTerminalExit: (listener: TerminalExitListener) => Promise<UnlistenFn>;
   runCommand: (command: string, cwd?: string) => Promise<string>;
 }
 
@@ -409,36 +438,149 @@ export const rendererBridge: RendererBridge = {
     }
   },
 
-  runCommand: async (command, cwd) => {
+  createTerminal: async (request = {}) => {
+    const normalizedRequest: TerminalCreateRequest = {
+      cwd: request.cwd,
+      cols: request.cols ?? 120,
+      rows: request.rows ?? 34,
+      shell: request.shell,
+      args: request.args
+    };
+
     if (!hasTauriRuntime()) {
-      placeholderLog("terminal.create/write", { command, cwd });
-      return `mock-${Date.now()}`;
+      placeholderLog("terminal.create", normalizedRequest);
+      return `mock-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     }
 
     try {
       await ensureTerminalEvents();
+      const created = await invokeWithFallbacks<TerminalCreateResponse>("terminal.create", TAURI_COMMANDS.terminalCreate, [
+        { request: normalizedRequest },
+        toRecord(normalizedRequest)
+      ]);
+      terminalOutputBySession.set(created.sessionId, "");
+      return created.sessionId;
+    } catch (error) {
+      console.error("terminal.create failed", error);
+      throw error;
+    }
+  },
 
-      const createRequest = {
+  writeTerminal: async (sessionId, data) => {
+    if (!sessionId) {
+      return;
+    }
+
+    if (!hasTauriRuntime()) {
+      placeholderLog("terminal.write", { sessionId, bytes: data.length });
+      appendTerminalOutput({ sessionId, data });
+      return;
+    }
+
+    try {
+      const request: TerminalWriteRequest = {
+        sessionId,
+        data
+      };
+      await invokeWithFallbacks<void>("terminal.write", TAURI_COMMANDS.terminalWrite, [{ request }, toRecord(request)]);
+    } catch (error) {
+      console.error("terminal.write failed", error);
+      throw error;
+    }
+  },
+
+  resizeTerminal: async (sessionId, cols, rows) => {
+    if (!sessionId) {
+      return;
+    }
+
+    const request: TerminalResizeRequest = {
+      sessionId,
+      cols,
+      rows
+    };
+
+    if (!hasTauriRuntime()) {
+      placeholderLog("terminal.resize", request);
+      return;
+    }
+
+    try {
+      await invokeWithFallbacks<void>("terminal.resize", TAURI_COMMANDS.terminalResize, [{ request }, toRecord(request)]);
+    } catch (error) {
+      console.error("terminal.resize failed", error);
+      throw error;
+    }
+  },
+
+  killTerminal: async (sessionId, signal) => {
+    if (!sessionId) {
+      return;
+    }
+
+    const request: TerminalKillRequest = {
+      sessionId,
+      signal
+    };
+
+    if (!hasTauriRuntime()) {
+      placeholderLog("terminal.kill", request);
+      terminalOutputBySession.delete(sessionId);
+      return;
+    }
+
+    try {
+      await invokeWithFallbacks<void>("terminal.kill", TAURI_COMMANDS.terminalKill, [{ request }, toRecord(request)]);
+      terminalOutputBySession.delete(sessionId);
+    } catch (error) {
+      console.error("terminal.kill failed", error);
+      throw error;
+    }
+  },
+
+  listTerminalSessions: async () => {
+    if (!hasTauriRuntime()) {
+      placeholderLog("terminal.list");
+      return Array.from(terminalOutputBySession.keys());
+    }
+
+    try {
+      return await invokeWithFallbacks<string[]>("terminal.list", TAURI_COMMANDS.terminalList, [undefined]);
+    } catch (error) {
+      console.error("terminal.list failed", error);
+      return [];
+    }
+  },
+
+  onTerminalOutput: async (listener) => {
+    terminalOutputListeners.add(listener);
+    if (hasTauriRuntime()) {
+      await ensureTerminalEvents();
+    }
+    return () => {
+      terminalOutputListeners.delete(listener);
+    };
+  },
+
+  onTerminalExit: async (listener) => {
+    terminalExitListeners.add(listener);
+    if (hasTauriRuntime()) {
+      await ensureTerminalEvents();
+    }
+    return () => {
+      terminalExitListeners.delete(listener);
+    };
+  },
+
+  runCommand: async (command, cwd) => {
+    try {
+      const sessionId = await rendererBridge.createTerminal({
         cwd,
         cols: 120,
         rows: 34
-      };
-      const created = await invokeWithFallbacks<TerminalCreateResponse>("terminal.create", TAURI_COMMANDS.terminalCreate, [
-        { request: createRequest },
-        toRecord(createRequest)
-      ]);
-
-      terminalOutputBySession.set(created.sessionId, "");
-
-      const writeRequest = {
-        sessionId: created.sessionId,
-        data: `${command}\n`
-      };
-      await invokeWithFallbacks<void>("terminal.write", TAURI_COMMANDS.terminalWrite, [
-        { request: writeRequest },
-        toRecord(writeRequest)
-      ]);
-      return created.sessionId;
+      });
+      await rendererBridge.writeTerminal(sessionId, `${command}\n`);
+      return sessionId;
     } catch (error) {
       console.error("terminal.create/write failed", error);
       throw error;

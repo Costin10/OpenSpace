@@ -1,6 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, JSX } from "react";
 import type { WorkspaceState } from "@shared/ipc";
+import { Compartment, EditorState } from "@codemirror/state";
+import { css as cssLanguage } from "@codemirror/lang-css";
+import { javascript } from "@codemirror/lang-javascript";
+import { json } from "@codemirror/lang-json";
+import { markdown } from "@codemirror/lang-markdown";
+import { oneDark } from "@codemirror/theme-one-dark";
+import { EditorView, type ViewUpdate } from "@codemirror/view";
+import { FitAddon } from "@xterm/addon-fit";
+import { WebglAddon } from "@xterm/addon-webgl";
+import { Terminal } from "@xterm/xterm";
+import { basicSetup } from "codemirror";
+import type { IDisposable, ITerminalOptions } from "@xterm/xterm";
 import { rendererBridge } from "./bridge/openspaceBridge";
 import {
   DOCUMENTS,
@@ -11,7 +23,6 @@ import {
   TEMPLATES,
   TERMINAL_PANES,
   THEMES,
-  TIMELINE_EVENTS,
   WORKSPACE_TABS
 } from "./data/mockData";
 import type {
@@ -27,6 +38,7 @@ import type {
   WorkspaceHealth,
   WorkspaceTab
 } from "./types/ui";
+import "@xterm/xterm/css/xterm.css";
 
 const MAX_TERMINAL_PANES = 16;
 
@@ -72,6 +84,50 @@ const inferLanguage = (name: string): string => {
       return "text";
   }
 };
+
+const codeMirrorLanguageExtension = (language: string) => {
+  switch (language) {
+    case "ts":
+      return javascript({ typescript: true });
+    case "tsx":
+      return javascript({ typescript: true, jsx: true });
+    case "js":
+      return javascript();
+    case "jsx":
+      return javascript({ jsx: true });
+    case "json":
+      return json();
+    case "css":
+      return cssLanguage();
+    case "markdown":
+      return markdown();
+    default:
+      return [];
+  }
+};
+
+const terminalTheme = {
+  background: "#0b1320",
+  foreground: "#dbefff",
+  cursor: "#00d8ff",
+  selectionBackground: "rgba(0, 216, 255, 0.2)",
+  black: "#09111c",
+  blue: "#3d8bff",
+  brightBlue: "#68b2ff",
+  brightBlack: "#31506d",
+  brightCyan: "#63eeff",
+  brightGreen: "#48f2b1",
+  brightMagenta: "#cf9eff",
+  brightRed: "#ff849e",
+  brightWhite: "#f6fbff",
+  brightYellow: "#ffd887",
+  cyan: "#2ac8d8",
+  green: "#13d688",
+  magenta: "#a178ff",
+  red: "#ff5c81",
+  white: "#cce7ff",
+  yellow: "#f4bf55"
+} satisfies ITerminalOptions["theme"];
 
 const createTimelineEvent = (
   title: string,
@@ -161,6 +217,16 @@ const findNodeById = (nodes: FileNode[], targetId: string): FileNode | undefined
   }
   return undefined;
 };
+
+interface TerminalRuntime {
+  dataSubscription: IDisposable;
+  fitAddon: FitAddon;
+  hostElement: HTMLDivElement;
+  resizeFrame: number | null;
+  resizeObserver: ResizeObserver;
+  terminal: Terminal;
+  webglAddon: WebglAddon | null;
+}
 
 interface PanelHeaderProps {
   title: string;
@@ -293,6 +359,129 @@ const TemplatePickerModal = ({
   </div>
 );
 
+const codeEditorTheme = EditorView.theme(
+  {
+    "&": {
+      background: "color-mix(in srgb, var(--bg-shell) 86%, black 14%)",
+      border: "1px solid var(--border-soft)",
+      borderRadius: "0.65rem",
+      color: "var(--text-primary)",
+      flex: "1",
+      fontFamily: '"IBM Plex Mono", "Consolas", monospace',
+      fontSize: "0.8rem",
+      minHeight: "0",
+      overflow: "hidden"
+    },
+    "&.cm-editor.cm-focused": {
+      borderColor: "var(--accent)",
+      outline: "none"
+    },
+    ".cm-content": {
+      lineHeight: "1.45",
+      minHeight: "100%",
+      padding: "0.65rem 0.7rem"
+    },
+    ".cm-gutters": {
+      background: "color-mix(in srgb, var(--bg-shell) 82%, black 18%)",
+      border: "none",
+      color: "var(--text-muted)"
+    },
+    ".cm-activeLine": {
+      background: "rgba(0, 216, 255, 0.06)"
+    },
+    ".cm-activeLineGutter": {
+      background: "rgba(0, 216, 255, 0.1)"
+    }
+  },
+  {
+    dark: true
+  }
+);
+
+interface CodeEditorProps {
+  language: string;
+  onChange: (value: string) => void;
+  value: string;
+}
+
+const CodeEditor = ({ language, onChange, value }: CodeEditorProps): JSX.Element => {
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const viewRef = useRef<EditorView | null>(null);
+  const languageCompartmentRef = useRef(new Compartment());
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) {
+      return undefined;
+    }
+
+    const languageCompartment = languageCompartmentRef.current;
+    const view = new EditorView({
+      parent: host,
+      state: EditorState.create({
+        doc: value,
+        extensions: [
+          basicSetup,
+          oneDark,
+          codeEditorTheme,
+          EditorView.lineWrapping,
+          languageCompartment.of(codeMirrorLanguageExtension(language)),
+          EditorView.updateListener.of((update: ViewUpdate) => {
+            if (!update.docChanged) {
+              return;
+            }
+            onChangeRef.current(update.state.doc.toString());
+          })
+        ]
+      })
+    });
+
+    viewRef.current = view;
+    return () => {
+      view.destroy();
+      viewRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) {
+      return;
+    }
+
+    view.dispatch({
+      effects: languageCompartmentRef.current.reconfigure(codeMirrorLanguageExtension(language))
+    });
+  }, [language]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) {
+      return;
+    }
+
+    const currentDoc = view.state.doc.toString();
+    if (currentDoc === value) {
+      return;
+    }
+
+    view.dispatch({
+      changes: {
+        from: 0,
+        to: currentDoc.length,
+        insert: value
+      }
+    });
+  }, [value]);
+
+  return <div className="code-editor" ref={hostRef} />;
+};
+
 function App(): JSX.Element {
   const [workspaceTabs, setWorkspaceTabs] = useState(WORKSPACE_TABS);
   const [activeTabId, setActiveTabId] = useState(WORKSPACE_TABS[0]?.id ?? "");
@@ -302,8 +491,15 @@ function App(): JSX.Element {
   const [documents, setDocuments] = useState<Record<string, EditorDocument>>(DOCUMENTS);
   const [editorText, setEditorText] = useState(DOCUMENTS["file-app"]?.content ?? "");
   const [terminalPaneCount, setTerminalPaneCount] = useState(4);
-  const [terminalPanes, setTerminalPanes] = useState<TerminalPane[]>(TERMINAL_PANES);
-  const [timelineEvents, setTimelineEvents] = useState(TIMELINE_EVENTS);
+  const [terminalPanes, setTerminalPanes] = useState<TerminalPane[]>(() =>
+    TERMINAL_PANES.map((pane) => ({
+      ...pane,
+      status: "idle",
+      outputPreview: "Waiting for terminal session.",
+      sessionId: undefined
+    }))
+  );
+  const [timelineEvents, setTimelineEvents] = useState<CommandTimelineEvent[]>([]);
   const [kanbanCards, setKanbanCards] = useState(KANBAN_CARDS);
   const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
   const [isTemplateModalOpen, setTemplateModalOpen] = useState(false);
@@ -312,6 +508,14 @@ function App(): JSX.Element {
     rendererBridge.hasBackend() ? "Backend connected" : "Renderer-only placeholder mode"
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [terminalHostVersion, setTerminalHostVersion] = useState(0);
+
+  const terminalRuntimesRef = useRef<Map<string, TerminalRuntime>>(new Map());
+  const terminalHostsRef = useRef<Map<string, HTMLDivElement>>(new Map());
+  const terminalHostCallbacksRef = useRef<Map<string, (host: HTMLDivElement | null) => void>>(new Map());
+  const paneSessionMapRef = useRef<Map<string, string>>(new Map());
+  const sessionPaneMapRef = useRef<Map<string, string>>(new Map());
+  const creatingSessionRef = useRef<Map<string, Promise<string>>>(new Map());
 
   const activeTheme: ThemeDefinition = useMemo(
     () => THEMES.find((theme) => theme.id === themeId) ?? THEMES[0],
@@ -414,9 +618,303 @@ function App(): JSX.Element {
     return () => window.removeEventListener("keydown", handleEscape);
   }, [isTemplateModalOpen]);
 
-  const updatePane = (paneId: string, mutator: (pane: TerminalPane) => TerminalPane): void => {
+  const activeRootPath = activeTab?.rootPath ?? workspaceState.rootPath ?? undefined;
+
+  const updatePane = useCallback((paneId: string, mutator: (pane: TerminalPane) => TerminalPane): void => {
     setTerminalPanes((previous) => previous.map((pane) => (pane.id === paneId ? mutator(pane) : pane)));
-  };
+  }, []);
+
+  const getTerminalHostRef = useCallback((paneId: string): ((host: HTMLDivElement | null) => void) => {
+    const existing = terminalHostCallbacksRef.current.get(paneId);
+    if (existing) {
+      return existing;
+    }
+
+    const callback = (host: HTMLDivElement | null): void => {
+      const previousHost = terminalHostsRef.current.get(paneId);
+      if (host) {
+        terminalHostsRef.current.set(paneId, host);
+      } else {
+        terminalHostsRef.current.delete(paneId);
+      }
+
+      if (previousHost !== host) {
+        setTerminalHostVersion((version) => version + 1);
+      }
+    };
+    terminalHostCallbacksRef.current.set(paneId, callback);
+    return callback;
+  }, []);
+
+  const resizePaneTerminal = useCallback((paneId: string): void => {
+    const runtime = terminalRuntimesRef.current.get(paneId);
+    if (!runtime) {
+      return;
+    }
+
+    runtime.fitAddon.fit();
+    const sessionId = paneSessionMapRef.current.get(paneId);
+    if (!sessionId) {
+      return;
+    }
+
+    const cols = Math.max(2, runtime.terminal.cols);
+    const rows = Math.max(2, runtime.terminal.rows);
+    void rendererBridge.resizeTerminal(sessionId, cols, rows).catch((error) => {
+      console.error(`terminal resize failed for ${paneId}`, error);
+    });
+  }, []);
+
+  const ensurePaneSession = useCallback(
+    async (paneId: string): Promise<string> => {
+      const existing = paneSessionMapRef.current.get(paneId);
+      if (existing) {
+        return existing;
+      }
+
+      const inFlight = creatingSessionRef.current.get(paneId);
+      if (inFlight) {
+        return inFlight;
+      }
+
+      const runtime = terminalRuntimesRef.current.get(paneId);
+      if (!runtime) {
+        throw new Error(`terminal runtime missing for ${paneId}`);
+      }
+
+      const createSessionPromise = rendererBridge
+        .createTerminal({
+          cwd: activeRootPath,
+          cols: Math.max(2, runtime.terminal.cols),
+          rows: Math.max(2, runtime.terminal.rows)
+        })
+        .then((sessionId) => {
+          paneSessionMapRef.current.set(paneId, sessionId);
+          sessionPaneMapRef.current.set(sessionId, paneId);
+          updatePane(paneId, (pane) => ({
+            ...pane,
+            sessionId,
+            status: "idle",
+            outputPreview: `Session ${sessionId} ready`
+          }));
+          resizePaneTerminal(paneId);
+          return sessionId;
+        })
+        .catch((error) => {
+          updatePane(paneId, (pane) => ({
+            ...pane,
+            sessionId: undefined,
+            status: "error",
+            outputPreview: "Failed to create terminal session."
+          }));
+          throw error;
+        })
+        .finally(() => {
+          creatingSessionRef.current.delete(paneId);
+        });
+
+      creatingSessionRef.current.set(paneId, createSessionPromise);
+      return createSessionPromise;
+    },
+    [activeRootPath, resizePaneTerminal, updatePane]
+  );
+
+  const disposePaneRuntime = useCallback(
+    (paneId: string, killSession: boolean, resetPaneState = true): void => {
+      const runtime = terminalRuntimesRef.current.get(paneId);
+      if (runtime) {
+        runtime.resizeObserver.disconnect();
+        if (runtime.resizeFrame !== null) {
+          window.cancelAnimationFrame(runtime.resizeFrame);
+        }
+        runtime.dataSubscription.dispose();
+        runtime.webglAddon?.dispose();
+        runtime.terminal.dispose();
+        terminalRuntimesRef.current.delete(paneId);
+      }
+
+      const sessionId = paneSessionMapRef.current.get(paneId);
+      paneSessionMapRef.current.delete(paneId);
+      creatingSessionRef.current.delete(paneId);
+      if (sessionId) {
+        sessionPaneMapRef.current.delete(sessionId);
+        if (killSession) {
+          void rendererBridge.killTerminal(sessionId).catch((error) => {
+            console.error(`terminal kill failed for ${paneId}`, error);
+          });
+        }
+      }
+
+      if (resetPaneState) {
+        updatePane(paneId, (pane) => ({
+          ...pane,
+          sessionId: undefined,
+          status: "idle",
+          outputPreview: "Waiting for terminal session."
+        }));
+      }
+    },
+    [updatePane]
+  );
+
+  const createPaneRuntime = useCallback(
+    (paneId: string, hostElement: HTMLDivElement): void => {
+      const terminal = new Terminal({
+        allowProposedApi: true,
+        convertEol: true,
+        cursorBlink: true,
+        fontFamily: "IBM Plex Mono, Consolas, monospace",
+        fontSize: 12,
+        theme: terminalTheme
+      });
+      const fitAddon = new FitAddon();
+      terminal.loadAddon(fitAddon);
+
+      let webglAddon: WebglAddon | null = null;
+      try {
+        webglAddon = new WebglAddon();
+        terminal.loadAddon(webglAddon);
+      } catch (error) {
+        console.warn("xterm webgl addon unavailable; continuing with canvas renderer", error);
+      }
+
+      terminal.open(hostElement);
+
+      const dataSubscription = terminal.onData((data: string) => {
+        const sessionId = paneSessionMapRef.current.get(paneId);
+        if (!sessionId) {
+          return;
+        }
+
+        void rendererBridge.writeTerminal(sessionId, data).catch((error) => {
+          console.error(`terminal input write failed for ${paneId}`, error);
+          updatePane(paneId, (pane) => ({
+            ...pane,
+            status: "error",
+            outputPreview: "Terminal input write failed."
+          }));
+        });
+      });
+
+      const runtime: TerminalRuntime = {
+        dataSubscription,
+        fitAddon,
+        hostElement,
+        resizeFrame: null,
+        resizeObserver: new ResizeObserver(() => {
+          if (runtime.resizeFrame !== null) {
+            window.cancelAnimationFrame(runtime.resizeFrame);
+          }
+          runtime.resizeFrame = window.requestAnimationFrame(() => {
+            runtime.resizeFrame = null;
+            resizePaneTerminal(paneId);
+          });
+        }),
+        terminal,
+        webglAddon
+      };
+
+      runtime.resizeObserver.observe(hostElement);
+      terminalRuntimesRef.current.set(paneId, runtime);
+
+      resizePaneTerminal(paneId);
+      void ensurePaneSession(paneId);
+    },
+    [ensurePaneSession, resizePaneTerminal, updatePane]
+  );
+
+  useEffect(() => {
+    const visiblePaneIds = new Set(visibleTerminals.map((pane) => pane.id));
+
+    for (const pane of visibleTerminals) {
+      const hostElement = terminalHostsRef.current.get(pane.id);
+      if (!hostElement) {
+        continue;
+      }
+
+      const existing = terminalRuntimesRef.current.get(pane.id);
+      if (existing && existing.hostElement !== hostElement) {
+        disposePaneRuntime(pane.id, true);
+      }
+
+      if (!terminalRuntimesRef.current.has(pane.id)) {
+        createPaneRuntime(pane.id, hostElement);
+      } else {
+        resizePaneTerminal(pane.id);
+        void ensurePaneSession(pane.id);
+      }
+    }
+
+    for (const paneId of Array.from(terminalRuntimesRef.current.keys())) {
+      if (!visiblePaneIds.has(paneId)) {
+        disposePaneRuntime(paneId, true);
+      }
+    }
+  }, [createPaneRuntime, disposePaneRuntime, ensurePaneSession, resizePaneTerminal, terminalHostVersion, visibleTerminals]);
+
+  useEffect(
+    () => () => {
+      for (const paneId of Array.from(terminalRuntimesRef.current.keys())) {
+        disposePaneRuntime(paneId, true, false);
+      }
+    },
+    [disposePaneRuntime]
+  );
+
+  useEffect(() => {
+    let outputUnlisten: (() => void) | null = null;
+    let exitUnlisten: (() => void) | null = null;
+    let disposed = false;
+
+    const subscribe = async (): Promise<void> => {
+      outputUnlisten = await rendererBridge.onTerminalOutput((payload) => {
+        const paneId = sessionPaneMapRef.current.get(payload.sessionId);
+        if (!paneId) {
+          return;
+        }
+
+        const runtime = terminalRuntimesRef.current.get(paneId);
+        runtime?.terminal.write(payload.data);
+      });
+
+      exitUnlisten = await rendererBridge.onTerminalExit((payload) => {
+        const paneId = sessionPaneMapRef.current.get(payload.sessionId);
+        if (!paneId) {
+          return;
+        }
+
+        sessionPaneMapRef.current.delete(payload.sessionId);
+        paneSessionMapRef.current.delete(paneId);
+
+        const runtime = terminalRuntimesRef.current.get(paneId);
+        runtime?.terminal.writeln(`\r\n[process exited with code ${payload.exitCode}]`);
+
+        updatePane(paneId, (pane) => ({
+          ...pane,
+          sessionId: undefined,
+          status: payload.exitCode === 0 ? "success" : "error",
+          outputPreview: `Process exited (${payload.exitCode})`
+        }));
+
+        if (terminalRuntimesRef.current.has(paneId)) {
+          void ensurePaneSession(paneId);
+        }
+      });
+
+      if (disposed) {
+        outputUnlisten?.();
+        exitUnlisten?.();
+      }
+    };
+
+    void subscribe();
+
+    return () => {
+      disposed = true;
+      outputUnlisten?.();
+      exitUnlisten?.();
+    };
+  }, [ensurePaneSession, updatePane]);
 
   const saveWorkspaceRoot = async (rootPath: string | null): Promise<void> => {
     const nextRecent = rootPath
@@ -447,8 +945,6 @@ function App(): JSX.Element {
     const tab = workspaceTabs.find((candidate) => candidate.id === tabId);
     const rootPath = tab?.rootPath ?? workspaceState.rootPath;
 
-    appendTimeline("Switch workspace tab", tab?.name ?? tabId, `switch:${tabId}`, "idle");
-
     if (rootPath) {
       void saveWorkspaceRoot(rootPath);
       void refreshTreeForRoot(rootPath);
@@ -457,7 +953,6 @@ function App(): JSX.Element {
 
   const handleSelectFile = async (node: FileNode): Promise<void> => {
     setSelectedFileId(node.id);
-    appendTimeline("Open file", node.name, `open:${node.path ?? node.id}`, "idle");
 
     if (!node.path) {
       return;
@@ -483,7 +978,6 @@ function App(): JSX.Element {
   const handleSaveFile = async (): Promise<void> => {
     const targetPath = selectedNode?.path ?? selectedDocument?.path;
     if (!targetPath) {
-      appendTimeline("Save file", "No backend file path. Kept local editor state.", "save:local", "idle");
       const existing = selectedDocument;
       if (existing) {
         setDocuments((previous) => ({
@@ -501,7 +995,6 @@ function App(): JSX.Element {
     setIsSaving(true);
     await rendererBridge.writeFile(targetPath, editorText);
     setIsSaving(false);
-    appendTimeline("Save file", targetPath, `write:${targetPath}`, "success");
 
     setDocuments((previous) => ({
       ...previous,
@@ -519,75 +1012,44 @@ function App(): JSX.Element {
   const handleTerminalCountChange = (value: number): void => {
     const nextCount = Math.max(1, Math.min(MAX_TERMINAL_PANES, value));
     setTerminalPaneCount(nextCount);
-    appendTimeline("Adjust terminal grid", `${nextCount} panes`, `terminals:${nextCount}`, "running");
   };
 
-  const runCommand = async (command: string, source: string): Promise<string> => {
-    const workingDirectory = activeTab?.rootPath ?? workspaceState.rootPath ?? undefined;
-    const sessionId = await rendererBridge.runCommand(command, workingDirectory);
-    appendTimeline("Run command", `${source} -> ${command}`, command, "running");
-    return sessionId;
-  };
-
-  const handleRunPane = async (pane: TerminalPane): Promise<void> => {
-    updatePane(pane.id, (current) => ({
-      ...current,
-      status: "running",
-      outputPreview: "Dispatching command to terminal session..."
+  const handlePaneCommandChange = (paneId: string, command: string): void => {
+    updatePane(paneId, (pane) => ({
+      ...pane,
+      command
     }));
-    try {
-      const sessionId = await runCommand(pane.command, pane.label);
-      updatePane(pane.id, (current) => ({
-        ...current,
-        sessionId,
-        status: "success",
-        outputPreview: `Attached to session ${sessionId}`
-      }));
-    } catch {
-      updatePane(pane.id, (current) => ({
-        ...current,
-        status: "error",
-        outputPreview: "Failed to dispatch command."
-      }));
-    }
   };
 
-  const handleRunCommandBlock = async (eventId: string): Promise<void> => {
-    const timelineEvent = timelineEvents.find((item) => item.id === eventId);
-    if (!timelineEvent) {
+  const handleRunPaneCommand = async (paneId: string): Promise<void> => {
+    const pane = terminalPanes.find((candidate) => candidate.id === paneId);
+    if (!pane) {
       return;
     }
 
-    setTimelineEvents((previous) =>
-      previous.map((item) => (item.id === eventId ? { ...item, status: "running", timestamp: buildTimestamp() } : item))
-    );
+    const command = pane.command.trim();
+    if (!command) {
+      return;
+    }
+
+    updatePane(paneId, (current) => ({
+      ...current,
+      status: "running",
+      outputPreview: `Running: ${command}`
+    }));
+
     try {
-      const sessionId = await runCommand(timelineEvent.command, timelineEvent.title);
-      setTimelineEvents((previous) =>
-        previous.map((item) =>
-          item.id === eventId
-            ? {
-                ...item,
-                status: "success",
-                detail: `${timelineEvent.detail} | session ${sessionId}`,
-                timestamp: buildTimestamp()
-              }
-            : item
-        )
-      );
-    } catch {
-      setTimelineEvents((previous) =>
-        previous.map((item) =>
-          item.id === eventId
-            ? {
-                ...item,
-                status: "error",
-                detail: `${timelineEvent.detail} | dispatch failed`,
-                timestamp: buildTimestamp()
-              }
-            : item
-        )
-      );
+      const sessionId = await ensurePaneSession(paneId);
+      await rendererBridge.writeTerminal(sessionId, `${command}\n`);
+      appendTimeline("Run command", `${pane.label} | session ${sessionId}`, command, "running");
+    } catch (error) {
+      console.error(`run command failed for ${paneId}`, error);
+      updatePane(paneId, (current) => ({
+        ...current,
+        status: "error",
+        outputPreview: "Command dispatch failed."
+      }));
+      appendTimeline("Run command", `${pane.label} | dispatch failed`, command, "error");
     }
   };
 
@@ -601,7 +1063,6 @@ function App(): JSX.Element {
       void persistKanban(next);
       return next;
     });
-    appendTimeline("Move kanban card", `${cardId} -> ${lane}`, `kanban:${cardId}:${lane}`, "success");
   };
 
   const handleApplyTemplate = (template: TemplateDescriptor): void => {
@@ -609,7 +1070,6 @@ function App(): JSX.Element {
     setThemeId(template.suggestedThemeId);
     setTerminalPaneCount(paneCount);
     setTemplateModalOpen(false);
-    appendTimeline("Apply template", template.name, `template:${template.id}`, "success");
   };
 
   return (
@@ -668,10 +1128,9 @@ function App(): JSX.Element {
                 {isSaving ? "Saving..." : hasUnsavedChanges ? "Save*" : "Save"}
               </button>
             </div>
-            <textarea
-              className="code-editor"
-              onChange={(event) => setEditorText(event.target.value)}
-              spellCheck={false}
+            <CodeEditor
+              language={selectedDocument?.language ?? selectedNode?.language ?? "text"}
+              onChange={setEditorText}
               value={editorText}
             />
           </section>
@@ -699,32 +1158,49 @@ function App(): JSX.Element {
                   <span>{pane.label}</span>
                   <span className={`status-pill ${pane.status}`}>{pane.status}</span>
                 </header>
-                <p className="terminal-command">{pane.command}</p>
+                <p className="terminal-command">{pane.sessionId ? `session ${pane.sessionId}` : "starting session..."}</p>
                 <p className="terminal-output">{pane.outputPreview}</p>
-                <button className="text-button" onClick={() => void handleRunPane(pane)} type="button">
-                  Run in terminal
-                </button>
+                <div className="terminal-host" ref={getTerminalHostRef(pane.id)} />
+                <form
+                  className="pane-command-form"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void handleRunPaneCommand(pane.id);
+                  }}
+                >
+                  <input
+                    className="pane-command-input"
+                    onChange={(event) => handlePaneCommandChange(pane.id, event.target.value)}
+                    placeholder="Type command (example: npm run test)"
+                    spellCheck={false}
+                    value={pane.command}
+                  />
+                  <button className="text-button" type="submit">
+                    Run
+                  </button>
+                </form>
               </article>
             ))}
           </div>
         </section>
 
         <aside className="panel panel-body timeline-panel">
-          <PanelHeader title="Command Blocks" subtitle="Timeline of build/test/deploy actions" />
+          <PanelHeader title="Command Blocks" subtitle="Commands executed from pane inputs" />
           <ul className="timeline-list">
-            {timelineEvents.map((event) => (
-              <li className={`timeline-item ${event.status}`} key={event.id}>
-                <div className="timeline-item-head">
-                  <strong>{event.title}</strong>
-                  <time>{event.timestamp}</time>
-                </div>
-                <p>{event.detail}</p>
-                <p className="timeline-command">{event.command}</p>
-                <button className="text-button" onClick={() => void handleRunCommandBlock(event.id)} type="button">
-                  Run block
-                </button>
-              </li>
-            ))}
+            {timelineEvents.length === 0 ? (
+              <li className="timeline-empty">Run any pane command to populate command history.</li>
+            ) : (
+              timelineEvents.map((event) => (
+                <li className={`timeline-item ${event.status}`} key={event.id}>
+                  <div className="timeline-item-head">
+                    <strong>{event.title}</strong>
+                    <time>{event.timestamp}</time>
+                  </div>
+                  <p>{event.detail}</p>
+                  <p className="timeline-command">{event.command}</p>
+                </li>
+              ))
+            )}
           </ul>
         </aside>
       </main>

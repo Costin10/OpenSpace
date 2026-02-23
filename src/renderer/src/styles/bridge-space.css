@@ -395,22 +395,15 @@ textarea {
 }
 
 .code-editor {
-  background: color-mix(in srgb, var(--bg-shell) 86%, black 14%);
-  border: 1px solid var(--border-soft);
-  border-radius: 0.65rem;
-  color: var(--text-primary);
+  display: flex;
   flex: 1;
-  font-family: "IBM Plex Mono", "Consolas", monospace;
-  font-size: 0.8rem;
   line-height: 1.45;
   min-height: 0;
-  padding: 0.7rem;
-  resize: none;
 }
 
-.code-editor:focus-visible {
-  border-color: var(--accent);
-  outline: none;
+.code-editor .cm-editor {
+  height: 100%;
+  width: 100%;
 }
 
 .panel-heading-row {
@@ -454,7 +447,7 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 0.42rem;
-  min-height: 8.3rem;
+  min-height: 14rem;
   padding: 0.55rem;
 }
 
@@ -489,8 +482,43 @@ textarea {
 
 .terminal-output {
   color: var(--text-muted);
-  font-size: 0.79rem;
+  font-size: 0.72rem;
+}
+
+.terminal-host {
+  background: color-mix(in srgb, var(--bg-root) 90%, black 10%);
+  border: 1px solid color-mix(in srgb, var(--border-soft) 78%, transparent);
+  border-radius: 0.52rem;
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.terminal-host .xterm {
+  height: 100%;
+  padding: 0.25rem 0.3rem;
+}
+
+.pane-command-form {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.pane-command-input {
+  background: color-mix(in srgb, var(--bg-shell) 84%, black 16%);
+  border: 1px solid var(--border-soft);
+  border-radius: 0.45rem;
+  color: var(--text-primary);
+  flex: 1;
+  font-family: "IBM Plex Mono", "Consolas", monospace;
+  font-size: 0.72rem;
+  min-width: 0;
+  padding: 0.28rem 0.42rem;
+}
+
+.pane-command-input:focus-visible {
+  border-color: var(--accent);
+  outline: none;
 }
 
 .status-pill {
@@ -531,6 +559,14 @@ textarea {
   min-height: 0;
   overflow: auto;
   padding: 0;
+}
+
+.timeline-empty {
+  border: 1px dashed color-mix(in srgb, var(--border-soft) 80%, transparent);
+  border-radius: 0.62rem;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  padding: 0.65rem;
 }
 
 .timeline-item {
