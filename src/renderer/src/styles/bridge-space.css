@@ -827,7 +827,7 @@ textarea {
 }
 
 .bridge-shell-exact {
-  background: #04060d;
+  background: var(--bg-root);
   gap: 0;
   padding: 0;
 }
@@ -839,8 +839,8 @@ textarea {
 
 .shell-topbar {
   align-items: center;
-  background: linear-gradient(180deg, #070b15, #050910);
-  border-bottom: 1px solid #14213a;
+  background: linear-gradient(180deg, var(--bg-panel), var(--bg-shell));
+  border-bottom: 1px solid var(--border-soft);
   display: flex;
   justify-content: space-between;
   min-height: 2.2rem;
@@ -856,7 +856,7 @@ textarea {
 
 .brand-mark {
   align-items: center;
-  color: #5da6ff;
+  color: var(--accent);
   display: inline-flex;
   font-size: 1.05rem;
   justify-content: center;
@@ -870,16 +870,16 @@ textarea {
 }
 
 .no-workspaces {
-  color: #465a81;
+  color: var(--text-muted);
   font-size: 0.82rem;
 }
 
 .workspace-pill {
   align-items: center;
-  background: #12335a;
-  border: 1px solid #215087;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
   border-radius: 0.34rem;
-  color: #d5e8ff;
+  color: var(--text-primary);
   cursor: pointer;
   display: inline-flex;
   font-size: 0.76rem;
@@ -889,12 +889,17 @@ textarea {
 }
 
 .workspace-pill.active {
-  background: #0f8e66;
-  border-color: #1ea37a;
+  background: color-mix(in srgb, var(--accent) 30%, var(--bg-raised));
+  border-color: var(--accent);
+}
+
+.workspace-pill.settings-pill {
+  background: color-mix(in srgb, var(--success) 25%, var(--bg-raised));
+  border-color: var(--success);
 }
 
 .pill-count {
-  background: rgba(228, 245, 255, 0.2);
+  background: color-mix(in srgb, var(--text-primary) 20%, transparent);
   border-radius: 999px;
   font-family: "IBM Plex Mono", "Consolas", monospace;
   font-size: 0.62rem;
@@ -905,9 +910,9 @@ textarea {
 .icon-button {
   align-items: center;
   background: transparent;
-  border: 1px solid #1d2e4f;
+  border: 1px solid var(--border-soft);
   border-radius: 0.28rem;
-  color: #5c78a7;
+  color: var(--text-muted);
   cursor: pointer;
   display: inline-flex;
   font-size: 0.82rem;
@@ -916,9 +921,10 @@ textarea {
   width: 1.35rem;
 }
 
-.icon-button:hover {
-  border-color: #3e5a86;
-  color: #a0c1f2;
+.icon-button:hover,
+.icon-button.active {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .welcome-shell {
@@ -939,7 +945,7 @@ textarea {
 }
 
 .welcome-title-wrap h1 {
-  color: #f0f4ff;
+  color: var(--text-primary);
   font-size: 2.7rem;
   font-weight: 700;
   letter-spacing: -0.015em;
@@ -947,7 +953,7 @@ textarea {
 }
 
 .welcome-title-wrap p {
-  color: #7485e6;
+  color: var(--accent-alt);
   font-size: 2rem;
   margin: 0;
 }
@@ -958,29 +964,29 @@ textarea {
 }
 
 .welcome-actions .solid-button {
-  background: #6c6cff;
-  border-color: #7a7aff;
-  color: #f8faff;
+  background: color-mix(in srgb, var(--accent) 80%, var(--accent-alt));
+  border-color: var(--accent);
+  color: var(--bg-root);
   min-width: 165px;
 }
 
 .welcome-actions .text-button {
-  background: #090f1b;
-  border-color: #293758;
-  color: #c6d8fa;
+  background: var(--bg-shell);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
   min-width: 120px;
 }
 
 .shortcut-card {
-  background: #060b16;
-  border: 1px solid #1b2744;
+  background: var(--bg-shell);
+  border: 1px solid var(--border-soft);
   border-radius: 0.5rem;
   width: min(540px, 86vw);
 }
 
 .shortcut-card > header {
-  border-bottom: 1px solid #14203a;
-  color: #5b74a6;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text-muted);
   font-family: "IBM Plex Mono", "Consolas", monospace;
   font-size: 0.7rem;
   font-weight: 700;
@@ -999,14 +1005,14 @@ textarea {
 }
 
 .shortcut-grid span {
-  color: #7e95c0;
+  color: var(--text-muted);
 }
 
 .shortcut-grid kbd {
-  background: #040914;
-  border: 1px solid #1f2d4a;
+  background: var(--bg-root);
+  border: 1px solid var(--border-soft);
   border-radius: 0.24rem;
-  color: #8fa9d8;
+  color: var(--text-muted);
   font-family: "IBM Plex Mono", "Consolas", monospace;
   font-size: 0.69rem;
   padding: 0.05rem 0.34rem;
@@ -1025,8 +1031,8 @@ textarea {
 }
 
 .terminal-card.exact-pane {
-  background: #02050d;
-  border-color: #18243c;
+  background: var(--bg-root);
+  border-color: var(--border-soft);
   border-radius: 0;
   gap: 0;
   min-height: 0;
@@ -1034,21 +1040,21 @@ textarea {
 }
 
 .terminal-card.exact-pane header {
-  background: #050a16;
+  background: var(--bg-shell);
   border: none;
-  border-bottom: 1px solid #16233b;
+  border-bottom: 1px solid var(--border-soft);
   border-radius: 0;
   min-height: 1.35rem;
   padding: 0 0.4rem;
 }
 
 .terminal-card.exact-pane .pane-name {
-  color: #5f75a1;
+  color: var(--text-muted);
   font-size: 0.69rem;
 }
 
 .terminal-card.exact-pane .terminal-host {
-  background: #01040b;
+  background: var(--bg-root);
   border: none;
   border-radius: 0;
   min-height: 0;
@@ -1060,8 +1066,8 @@ textarea {
 
 .terminal-card.exact-pane .terminal-command,
 .terminal-card.exact-pane .terminal-output {
-  background: #020712;
-  border-top: 1px solid #16233b;
+  background: var(--bg-shell);
+  border-top: 1px solid var(--border-soft);
   font-family: "IBM Plex Mono", "Consolas", monospace;
   font-size: 0.72rem;
   margin: 0;
@@ -1069,17 +1075,17 @@ textarea {
 }
 
 .terminal-card.exact-pane .terminal-command {
-  color: #d8e8ff;
+  color: var(--text-primary);
 }
 
 .terminal-card.exact-pane .terminal-output {
-  color: #92acd7;
+  color: var(--text-muted);
   padding-top: 0.05rem;
 }
 
 .new-workspace-modal {
-  background: #080d18;
-  border: 1px solid #202d4c;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
   border-radius: 0.52rem;
   box-shadow: 0 28px 90px -40px rgba(0, 0, 0, 0.95);
   max-height: min(84vh, 820px);
@@ -1088,12 +1094,12 @@ textarea {
 }
 
 .new-workspace-modal .modal-header {
-  border-bottom: 1px solid #1a2744;
+  border-bottom: 1px solid var(--border-soft);
   padding: 0.6rem 0.7rem;
 }
 
 .new-workspace-modal .modal-header h3 {
-  color: #d8e6ff;
+  color: var(--text-primary);
   font-size: 1.05rem;
   margin: 0;
   text-transform: none;
@@ -1107,7 +1113,7 @@ textarea {
 }
 
 .section-label {
-  color: #5d72a0;
+  color: var(--text-muted);
   font-family: "IBM Plex Mono", "Consolas", monospace;
   font-size: 0.7rem;
   letter-spacing: 0.04em;
@@ -1122,10 +1128,10 @@ textarea {
 
 .layout-tile {
   align-items: center;
-  background: #050b17;
-  border: 1px solid #223353;
+  background: var(--bg-root);
+  border: 1px solid var(--border-soft);
   border-radius: 0.36rem;
-  color: #8da4ce;
+  color: var(--text-muted);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -1137,9 +1143,9 @@ textarea {
 }
 
 .layout-tile.selected {
-  border-color: #5d67ff;
-  box-shadow: inset 0 0 0 1px rgba(93, 103, 255, 0.5);
-  color: #c8d2ff;
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 50%, transparent);
+  color: var(--text-primary);
 }
 
 .layout-icon {
@@ -1148,7 +1154,7 @@ textarea {
 }
 
 .modal-hint {
-  color: #5f77a7;
+  color: var(--text-muted);
   font-size: 0.76rem;
   margin: 0;
   text-align: center;
@@ -1156,17 +1162,29 @@ textarea {
 
 .directory-row {
   align-items: center;
-  background: #050a14;
-  border: 1px solid #223553;
+  background: var(--bg-root);
+  border: 1px solid var(--border-soft);
   border-radius: 0.34rem;
   display: flex;
   justify-content: space-between;
   min-height: 2rem;
-  padding: 0 0.45rem;
+  padding: 0;
+}
+
+.directory-input {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  flex: 1;
+  font-family: "IBM Plex Mono", "Consolas", monospace;
+  font-size: 0.76rem;
+  min-width: 0;
+  outline: none;
+  padding: 0.3rem 0.45rem;
 }
 
 .directory-row span {
-  color: #c2d2ee;
+  color: var(--text-primary);
   font-family: "IBM Plex Mono", "Consolas", monospace;
   font-size: 0.76rem;
 }
@@ -1188,10 +1206,10 @@ textarea {
 
 .agent-row {
   align-items: center;
-  background: #050a14;
-  border: 1px solid #1f2f4d;
+  background: var(--bg-root);
+  border: 1px solid var(--border-soft);
   border-radius: 0.34rem;
-  color: #acc3ea;
+  color: var(--text-primary);
   display: flex;
   justify-content: space-between;
   min-height: 2rem;
@@ -1199,14 +1217,36 @@ textarea {
 }
 
 .agent-controls {
-  color: #7489b4;
+  align-items: center;
+  color: var(--text-muted);
+  display: flex;
   font-family: "IBM Plex Mono", "Consolas", monospace;
   font-size: 0.76rem;
+  gap: 0.3rem;
+}
+
+.agent-btn {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  border-radius: 0.2rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.72rem;
+  height: 1.2rem;
+  justify-content: center;
+  width: 1.2rem;
+}
+
+.agent-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .modal-footer {
   align-items: center;
-  border-top: 1px solid #1a2744;
+  border-top: 1px solid var(--border-soft);
   display: flex;
   gap: 0.42rem;
   justify-content: flex-end;
@@ -1215,9 +1255,554 @@ textarea {
 }
 
 .modal-footer .solid-button {
-  background: #5f68ff;
-  border-color: #7078ff;
-  color: #f4f7ff;
+  background: color-mix(in srgb, var(--accent) 80%, var(--accent-alt));
+  border-color: var(--accent);
+  color: var(--bg-root);
+}
+
+/* ===== Settings Page ===== */
+
+.settings-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: calc(100vh - 2.2rem);
+}
+
+.settings-sidebar {
+  background: var(--bg-shell);
+  border-right: 1px solid var(--border-soft);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.settings-sidebar-header {
+  align-items: center;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.8rem 0.75rem;
+}
+
+.settings-gear-icon {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+}
+
+.settings-sidebar-header h2 {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.settings-sidebar-header p {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  margin: 0;
+}
+
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.15rem;
+  padding: 0.5rem 0.45rem;
+}
+
+.settings-nav-item {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0.4rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  gap: 0.55rem;
+  padding: 0.45rem 0.55rem;
+  text-align: left;
+  width: 100%;
+}
+
+.settings-nav-item:hover {
+  background: color-mix(in srgb, var(--bg-raised) 60%, transparent);
+  border-color: var(--border-soft);
+}
+
+.settings-nav-item.active {
+  background: var(--bg-raised);
+  border-color: var(--border-strong);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.nav-item-icon {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  width: 1.2rem;
+  text-align: center;
+}
+
+.settings-nav-item.active .nav-item-icon {
+  color: var(--accent);
+}
+
+.nav-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+}
+
+.nav-item-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.nav-item-subtitle {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.settings-sidebar-footer {
+  align-items: center;
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-muted);
+  display: flex;
+  font-size: 0.72rem;
+  gap: 0.4rem;
+  padding: 0.55rem 0.75rem;
+}
+
+.connection-dot {
+  background: var(--success);
+  border-radius: 50%;
+  display: inline-block;
+  height: 0.45rem;
+  width: 0.45rem;
+}
+
+.settings-content {
+  background: var(--bg-root);
+  overflow-y: auto;
+  padding: 1.2rem 1.8rem;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  max-width: 780px;
+}
+
+.settings-section-header {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
+.section-icon {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  margin-top: 0.1rem;
+}
+
+.settings-section-header h2 {
+  color: var(--text-primary);
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.settings-section-header p {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  margin: 0.1rem 0 0;
+}
+
+.theme-group-label {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  margin: 0.6rem 0 0.15rem;
+}
+
+.theme-grid {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+}
+
+.theme-card {
+  background: var(--bg-panel);
+  border: 2px solid transparent;
+  border-radius: 0.45rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: border-color 100ms ease;
+}
+
+.theme-card:hover {
+  border-color: var(--border-strong);
+}
+
+.theme-card.selected {
+  border-color: var(--accent);
+}
+
+.theme-preview {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  height: 68px;
+  justify-content: center;
+  padding: 0.5rem 0.6rem;
+}
+
+.preview-dots {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.preview-dots span {
+  border-radius: 50%;
+  display: inline-block;
+  height: 0.42rem;
+  width: 0.42rem;
+}
+
+.preview-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 100%;
+}
+
+.preview-lines span {
+  border-radius: 999px;
+  display: block;
+  height: 0.18rem;
+}
+
+.theme-card-footer {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  padding: 0.32rem 0.5rem;
+}
+
+.theme-name {
+  color: var(--text-primary);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.theme-check {
+  background: var(--accent);
+  border-radius: 50%;
+  color: var(--bg-root);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.55rem;
+  font-weight: 700;
+  height: 1rem;
+  width: 1rem;
+}
+
+.settings-info-note {
+  background: color-mix(in srgb, var(--warning) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warning) 25%, transparent);
+  border-radius: 0.38rem;
+  color: var(--warning);
+  font-size: 0.76rem;
+  margin: 0.4rem 0 0;
+  padding: 0.4rem 0.6rem;
+}
+
+/* Shortcuts section */
+.shortcut-block {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: 0.42rem;
+  overflow: hidden;
+}
+
+.shortcut-block-header {
+  align-items: center;
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-raised));
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  justify-content: space-between;
+  padding: 0.45rem 0.65rem;
+}
+
+.shortcut-block-header span:first-child {
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.shortcut-count {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  border-radius: 0.2rem;
+  color: var(--accent);
+  font-family: "IBM Plex Mono", "Consolas", monospace;
+  font-size: 0.65rem;
+  padding: 0.08rem 0.28rem;
+}
+
+.shortcut-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.shortcut-row {
+  align-items: center;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-soft) 50%, transparent);
+  display: flex;
+  justify-content: space-between;
+  padding: 0.45rem 0.65rem;
+}
+
+.shortcut-row:last-child {
+  border-bottom: none;
+}
+
+.shortcut-action {
+  color: var(--text-primary);
+  font-size: 0.82rem;
+}
+
+.shortcut-keys {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.shortcut-keys kbd {
+  background: var(--bg-root);
+  border: 1px solid var(--border-soft);
+  border-radius: 0.22rem;
+  color: var(--text-muted);
+  font-family: "IBM Plex Mono", "Consolas", monospace;
+  font-size: 0.68rem;
+  min-width: 1.4rem;
+  padding: 0.1rem 0.3rem;
+  text-align: center;
+}
+
+/* Account section */
+.settings-card-label {
+  color: var(--text-muted);
+  font-family: "IBM Plex Mono", "Consolas", monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin-top: 0.6rem;
+  text-transform: uppercase;
+}
+
+.account-profile-card {
+  align-items: center;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: 0.42rem;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
+.profile-avatar {
+  align-items: center;
+  background: color-mix(in srgb, var(--accent) 20%, var(--bg-raised));
+  border-radius: 50%;
+  color: var(--accent);
+  display: flex;
+  font-size: 1rem;
+  font-weight: 700;
+  height: 2.5rem;
+  justify-content: center;
+  width: 2.5rem;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.profile-name-row {
+  align-items: center;
+  display: flex;
+  gap: 0.4rem;
+}
+
+.profile-name-row strong {
+  color: var(--text-primary);
+  font-size: 0.88rem;
+}
+
+.badge-active {
+  color: var(--success);
+  font-size: 0.72rem;
+}
+
+.profile-email {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.account-billing-card,
+.account-session-card,
+.account-debug-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: 0.42rem;
+  padding: 0.65rem 0.75rem;
+}
+
+.billing-plan-row,
+.session-row,
+.debug-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.billing-plan-row strong,
+.session-row strong,
+.debug-row strong {
+  color: var(--text-primary);
+  font-size: 0.84rem;
+}
+
+.badge-plan {
+  background: color-mix(in srgb, var(--success) 20%, transparent);
+  border-radius: 0.2rem;
+  color: var(--success);
+  font-size: 0.66rem;
+  font-weight: 600;
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.3rem;
+}
+
+.badge-session {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  border-radius: 0.2rem;
+  color: var(--accent);
+  font-size: 0.66rem;
+  font-weight: 600;
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.3rem;
+}
+
+.billing-detail,
+.session-detail,
+.debug-detail {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.session-info {
+  align-items: center;
+  display: flex;
+}
+
+/* API Keys section */
+.api-keys-create-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: 0.42rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem;
+}
+
+.api-keys-create-header {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+}
+
+.api-keys-create-header h3 {
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.api-keys-create-header p {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  margin: 0.1rem 0 0;
+}
+
+.api-key-input-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.api-key-input-row label {
+  color: var(--text-muted);
+  font-family: "IBM Plex Mono", "Consolas", monospace;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.api-key-input {
+  background: var(--bg-root);
+  border: 1px solid var(--border-soft);
+  border-radius: 0.34rem;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  padding: 0.4rem 0.55rem;
+}
+
+.api-key-input:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.api-key-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.api-keys-existing-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: 0.42rem;
+  padding: 0.75rem;
+}
+
+.existing-keys-header {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+}
+
+.existing-keys-header h3 {
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.existing-keys-header p {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  margin: 0.1rem 0 0;
+}
+
+.empty-keys-message {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  margin: 0.6rem 0 0;
+  text-align: center;
 }
 
 @media (max-width: 1360px) {

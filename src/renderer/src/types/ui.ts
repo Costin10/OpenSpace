@@ -65,6 +65,7 @@ export interface ThemeDefinition {
   id: string;
   label: string;
   description: string;
+  kind: "dark" | "light";
   vars: Record<string, string>;
 }
 

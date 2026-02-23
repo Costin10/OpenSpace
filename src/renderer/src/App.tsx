@@ -42,6 +42,50 @@ import "@xterm/xterm/css/xterm.css";
 
 const MAX_TERMINAL_PANES = 16;
 
+type SettingsTab = "appearance" | "shortcuts" | "account" | "api-keys";
+
+const SHORTCUT_SECTIONS = [
+  {
+    id: "workspaces",
+    label: "Workspaces",
+    icon: "⚙",
+    shortcuts: [
+      { action: "New workspace tab", keys: ["Ctrl", "T"] },
+      { action: "Close workspace", keys: ["Ctrl", "Shift", "W"] },
+      { action: "Next workspace", keys: ["Ctrl", "Shift", "]"] },
+      { action: "Previous workspace", keys: ["Ctrl", "Shift", "["] }
+    ]
+  },
+  {
+    id: "panes",
+    label: "Panes",
+    icon: "⊞",
+    shortcuts: [
+      { action: "New session", keys: ["Ctrl", "N"] },
+      { action: "Split horizontal", keys: ["Ctrl", "D"] },
+      { action: "Split vertical", keys: ["Ctrl", "Shift", "D"] },
+      { action: "Close active pane", keys: ["Ctrl", "W"] },
+      { action: "Next pane", keys: ["Ctrl", "]"] },
+      { action: "Previous pane", keys: ["Ctrl", "["] }
+    ]
+  },
+  {
+    id: "ai",
+    label: "AI Features",
+    icon: "⚡",
+    shortcuts: [
+      { action: "AI assistance", keys: ["Ctrl", "K"] }
+    ]
+  }
+];
+
+const SETTINGS_NAV: { id: SettingsTab; label: string; subtitle: string; icon: string }[] = [
+  { id: "appearance", label: "Appearance", subtitle: "Theme and display", icon: "◐" },
+  { id: "shortcuts", label: "Shortcuts", subtitle: "Keyboard bindings", icon: "⌨" },
+  { id: "account", label: "Account", subtitle: "Profile and billing", icon: "⚿" },
+  { id: "api-keys", label: "API Keys", subtitle: "Create and manage keys", icon: "⚷" }
+];
+
 const PRIORITY_LABELS: Record<KanbanCard["priority"], string> = {
   p1: "P1",
   p2: "P2",
@@ -314,21 +358,34 @@ const FileTreeNode = ({ depth, node, selectedFileId, onSelectFile }: FileTreeNod
 interface TemplatePickerModalProps {
   templates: TemplateDescriptor[];
   themeMap: Record<string, string>;
-  onApply: (template: TemplateDescriptor) => void;
+  defaultDirectory: string;
+  onApply: (template: TemplateDescriptor, directoryPath: string) => void;
   onClose: () => void;
 }
 
 const TemplatePickerModal = ({
   templates,
   themeMap,
+  defaultDirectory,
   onApply,
   onClose
 }: TemplatePickerModalProps): JSX.Element => {
   const sortedTemplates = [...templates].sort((left, right) => left.defaultPanes - right.defaultPanes);
   const [selectedTemplateId, setSelectedTemplateId] = useState(sortedTemplates[0]?.id ?? "");
+  const [directoryPath, setDirectoryPath] = useState(defaultDirectory || "~");
+  const [agentCounts, setAgentCounts] = useState<Record<string, number>>(() =>
+    Object.fromEntries(["Claude", "Codex", "Gemini", "Cursor", "OpenCode"].map((a) => [a, 0]))
+  );
 
   const selectedTemplate =
     sortedTemplates.find((template) => template.id === selectedTemplateId) ?? sortedTemplates[0] ?? templates[0];
+
+  const adjustAgent = (agent: string, delta: number): void => {
+    setAgentCounts((prev) => ({
+      ...prev,
+      [agent]: Math.max(0, Math.min(5, (prev[agent] ?? 0) + delta))
+    }));
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose} role="presentation">
@@ -368,10 +425,13 @@ const TemplatePickerModal = ({
         <div className="modal-section">
           <span className="section-label">Directory</span>
           <div className="directory-row">
-            <span>~</span>
-            <button className="text-button" onClick={onClose} type="button">
-              Browse
-            </button>
+            <input
+              className="directory-input"
+              onChange={(event) => setDirectoryPath(event.target.value)}
+              placeholder="/home/user/project"
+              type="text"
+              value={directoryPath}
+            />
           </div>
         </div>
 
@@ -380,16 +440,14 @@ const TemplatePickerModal = ({
             <span className="section-label">AI Agents</span>
             <span className="collapse-text">collapse</span>
           </div>
-          {[
-            "Claude",
-            "Codex",
-            "Gemini",
-            "Cursor",
-            "OpenCode"
-          ].map((agent) => (
+          {["Claude", "Codex", "Gemini", "Cursor", "OpenCode"].map((agent) => (
             <div className="agent-row" key={agent}>
               <span>{agent}</span>
-              <span className="agent-controls">− 0 +</span>
+              <span className="agent-controls">
+                <button className="agent-btn" onClick={() => adjustAgent(agent, -1)} type="button">−</button>
+                <span>{agentCounts[agent] ?? 0}</span>
+                <button className="agent-btn" onClick={() => adjustAgent(agent, 1)} type="button">+</button>
+              </span>
             </div>
           ))}
         </div>
@@ -398,11 +456,244 @@ const TemplatePickerModal = ({
           <button className="text-button" onClick={onClose} type="button">
             Cancel
           </button>
-          <button className="solid-button" onClick={() => selectedTemplate && onApply(selectedTemplate)} type="button">
-            Next
+          <button
+            className="solid-button"
+            onClick={() => selectedTemplate && onApply(selectedTemplate, directoryPath)}
+            type="button"
+          >
+            Create
           </button>
         </footer>
       </section>
+    </div>
+  );
+};
+
+interface SettingsViewProps {
+  activeThemeId: string;
+  themes: ThemeDefinition[];
+  onThemeChange: (themeId: string) => void;
+}
+
+const SettingsView = ({ activeThemeId, themes, onThemeChange }: SettingsViewProps): JSX.Element => {
+  const [tab, setTab] = useState<SettingsTab>("appearance");
+  const darkThemes = useMemo(() => themes.filter((t) => t.kind === "dark"), [themes]);
+  const lightThemes = useMemo(() => themes.filter((t) => t.kind === "light"), [themes]);
+
+  const renderThemeCard = (theme: ThemeDefinition): JSX.Element => (
+    <button
+      className={`theme-card ${activeThemeId === theme.id ? "selected" : ""}`}
+      key={theme.id}
+      onClick={() => onThemeChange(theme.id)}
+      type="button"
+    >
+      <div className={`theme-preview ${theme.kind}`} style={{ background: theme.vars["--bg-root"] }}>
+        <div className="preview-dots">
+          <span style={{ background: theme.vars["--danger"] }} />
+          <span style={{ background: theme.vars["--warning"] }} />
+          <span style={{ background: theme.vars["--success"] }} />
+        </div>
+        <div className="preview-lines">
+          <span style={{ background: theme.vars["--accent"], width: "55%" }} />
+          <span style={{ background: theme.vars["--text-muted"], width: "35%" }} />
+        </div>
+      </div>
+      <div className="theme-card-footer">
+        <span className="theme-name">{theme.label}</span>
+        {activeThemeId === theme.id && <span className="theme-check">✓</span>}
+      </div>
+    </button>
+  );
+
+  return (
+    <div className="settings-layout">
+      <aside className="settings-sidebar">
+        <div className="settings-sidebar-header">
+          <span className="settings-gear-icon">⚙</span>
+          <div>
+            <h2>Settings</h2>
+            <p>OpenSpace Desktop</p>
+          </div>
+        </div>
+        <nav className="settings-nav">
+          {SETTINGS_NAV.map((item) => (
+            <button
+              className={`settings-nav-item ${tab === item.id ? "active" : ""}`}
+              key={item.id}
+              onClick={() => setTab(item.id)}
+              type="button"
+            >
+              <span className="nav-item-icon">{item.icon}</span>
+              <div className="nav-item-text">
+                <span className="nav-item-label">{item.label}</span>
+                <span className="nav-item-subtitle">{item.subtitle}</span>
+              </div>
+            </button>
+          ))}
+        </nav>
+        <div className="settings-sidebar-footer">
+          <span className="connection-dot" />
+          <span>Connected</span>
+        </div>
+      </aside>
+
+      <main className="settings-content">
+        {tab === "appearance" && (
+          <section className="settings-section">
+            <div className="settings-section-header">
+              <span className="section-icon">◐</span>
+              <div>
+                <h2>Appearance</h2>
+                <p>Choose a theme and keep your workspace consistent across sessions.</p>
+              </div>
+            </div>
+
+            <h3 className="theme-group-label">☽ Dark themes</h3>
+            <div className="theme-grid">
+              {darkThemes.map(renderThemeCard)}
+            </div>
+
+            {lightThemes.length > 0 && (
+              <>
+                <h3 className="theme-group-label">☀ Light themes</h3>
+                <div className="theme-grid">
+                  {lightThemes.map(renderThemeCard)}
+                </div>
+              </>
+            )}
+
+            <p className="settings-info-note">ⓘ Theme changes are applied instantly and saved automatically.</p>
+          </section>
+        )}
+
+        {tab === "shortcuts" && (
+          <section className="settings-section">
+            <div className="settings-section-header">
+              <span className="section-icon">⌨</span>
+              <div>
+                <h2>Keyboard Shortcuts</h2>
+                <p>Reference frequently used shortcuts for workspace and pane actions.</p>
+              </div>
+            </div>
+
+            {SHORTCUT_SECTIONS.map((section) => (
+              <div className="shortcut-block" key={section.id}>
+                <div className="shortcut-block-header">
+                  <span>{section.icon} {section.label}</span>
+                  <span className="shortcut-count">{section.shortcuts.length}</span>
+                </div>
+                <div className="shortcut-list">
+                  {section.shortcuts.map((shortcut) => (
+                    <div className="shortcut-row" key={shortcut.action}>
+                      <span className="shortcut-action">{shortcut.action}</span>
+                      <div className="shortcut-keys">
+                        {shortcut.keys.map((key, keyIndex) => (
+                          <kbd key={`${shortcut.action}-${keyIndex}`}>{key}</kbd>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <p className="settings-info-note">ⓘ Shortcuts use Ctrl on Linux. Use ⌘ on macOS.</p>
+          </section>
+        )}
+
+        {tab === "account" && (
+          <section className="settings-section">
+            <div className="settings-section-header">
+              <span className="section-icon">⚿</span>
+              <div>
+                <h2>Account</h2>
+                <p>Manage your profile, billing, and current session.</p>
+              </div>
+            </div>
+
+            <div className="settings-card-label">PROFILE</div>
+            <div className="account-profile-card">
+              <div className="profile-avatar">O</div>
+              <div className="profile-info">
+                <div className="profile-name-row">
+                  <strong>openspace-user</strong>
+                  <span className="badge-active">● Active</span>
+                </div>
+                <span className="profile-email">local@openspace.dev</span>
+              </div>
+            </div>
+
+            <div className="settings-card-label">BILLING</div>
+            <div className="account-billing-card">
+              <div className="billing-plan-row">
+                <div>
+                  <strong>Community Edition</strong>
+                  <span className="badge-plan">Free</span>
+                </div>
+                <span className="billing-detail">Full access to all OpenSpace features</span>
+              </div>
+            </div>
+
+            <div className="settings-card-label">SESSION</div>
+            <div className="account-session-card">
+              <div className="session-row">
+                <div className="session-info">
+                  <strong>Current Device</strong>
+                  <span className="badge-session">This Session</span>
+                </div>
+                <span className="session-detail">OpenSpace Desktop • Linux</span>
+              </div>
+            </div>
+
+            <div className="settings-card-label">DEBUG</div>
+            <div className="account-debug-card">
+              <div className="debug-row">
+                <div><strong>Updates</strong></div>
+                <span className="debug-detail">Current version: 0.1.0</span>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {tab === "api-keys" && (
+          <section className="settings-section">
+            <div className="settings-section-header">
+              <span className="section-icon">⚷</span>
+              <div>
+                <h2>API Keys</h2>
+                <p>Create and manage API keys for MCP and programmatic access.</p>
+              </div>
+            </div>
+
+            <div className="api-keys-create-card">
+              <div className="api-keys-create-header">
+                <div>
+                  <h3>Create API Key</h3>
+                  <p>Keys are shown once. Copy and store them securely.</p>
+                </div>
+                <button className="solid-button" type="button">⚷ Create Key</button>
+              </div>
+              <div className="api-key-input-row">
+                <label>KEY NAME</label>
+                <input className="api-key-input" placeholder="e.g. Claude Desktop" type="text" />
+              </div>
+            </div>
+
+            <div className="api-keys-existing-card">
+              <div className="existing-keys-header">
+                <div>
+                  <h3>Existing Keys</h3>
+                  <p>Rotate compromised keys immediately. Revoke keys you no longer use.</p>
+                </div>
+                <button className="text-button" type="button">↻ Refresh</button>
+              </div>
+              <p className="empty-keys-message">No API keys created yet.</p>
+            </div>
+
+            <p className="settings-info-note">ⓘ Never share API keys in chat logs or source control. Rotate after suspected exposure.</p>
+          </section>
+        )}
+      </main>
     </div>
   );
 };
@@ -557,6 +848,7 @@ function App(): JSX.Element {
   );
   const [isSaving, setIsSaving] = useState(false);
   const [terminalHostVersion, setTerminalHostVersion] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
 
   const terminalRuntimesRef = useRef<Map<string, TerminalRuntime>>(new Map());
   const terminalHostsRef = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -665,6 +957,7 @@ function App(): JSX.Element {
   }, [isTemplateModalOpen]);
 
   const activeRootPath = activeTab?.rootPath ?? workspaceState.rootPath ?? undefined;
+  const terminalCwd = activeRootPath || undefined;
 
   const updatePane = useCallback((paneId: string, mutator: (pane: TerminalPane) => TerminalPane): void => {
     setTerminalPanes((previous) => previous.map((pane) => (pane.id === paneId ? mutator(pane) : pane)));
@@ -739,7 +1032,7 @@ function App(): JSX.Element {
 
       const createSessionPromise = rendererBridge
         .createTerminal({
-          cwd: activeRootPath,
+          cwd: terminalCwd,
           cols: Math.max(2, runtime.terminal.cols),
           rows: Math.max(2, runtime.terminal.rows)
         })
@@ -771,7 +1064,7 @@ function App(): JSX.Element {
       creatingSessionRef.current.set(paneId, createSessionPromise);
       return createSessionPromise;
     },
-    [activeRootPath, resizePaneTerminal, updatePane]
+    [terminalCwd, resizePaneTerminal, updatePane]
   );
 
   const disposePaneRuntime = useCallback(
@@ -1121,10 +1414,14 @@ function App(): JSX.Element {
     });
   };
 
-  const handleApplyTemplate = (template: TemplateDescriptor): void => {
+  const handleApplyTemplate = (template: TemplateDescriptor, directoryPath?: string): void => {
     const paneCount = Math.max(1, Math.min(MAX_TERMINAL_PANES, template.defaultPanes));
     const seedCommands =
       template.bootCommands.length > 0 ? template.bootCommands : ["git status", "npm run typecheck", "npm run build:web"];
+
+    const resolvedDir = directoryPath && directoryPath !== "~"
+      ? directoryPath
+      : workspaceState.rootPath ?? undefined;
 
     setTerminalPanes((previous) =>
       previous.map((pane, index) =>
@@ -1140,20 +1437,31 @@ function App(): JSX.Element {
     setThemeId(template.suggestedThemeId);
     setTerminalPaneCount(paneCount);
     setTemplateModalOpen(false);
+    setShowSettings(false);
+
+    const workspaceName = resolvedDir
+      ? resolvedDir.split("/").filter(Boolean).pop() ?? `Workspace ${Date.now() % 99}`
+      : `Workspace ${new Date().getSeconds() % 99 || 1}`;
+    const workspaceId = `ws-${Date.now()}`;
+    const nextTab: WorkspaceTab = {
+      id: workspaceId,
+      name: workspaceName,
+      branch: "main",
+      health: "healthy",
+      changedFiles: 0,
+      rootPath: resolvedDir
+    };
 
     if (workspaceTabs.length === 0) {
-      const workspaceName = `Workspace ${new Date().getSeconds() % 99 || 1}`;
-      const workspaceId = `ws-${Date.now()}`;
-      const nextTab: WorkspaceTab = {
-        id: workspaceId,
-        name: workspaceName,
-        branch: "main",
-        health: "healthy",
-        changedFiles: 0,
-        rootPath: workspaceState.rootPath ?? undefined
-      };
       setWorkspaceTabs([nextTab]);
-      setActiveTabId(workspaceId);
+    } else {
+      setWorkspaceTabs((prev) => [...prev, nextTab]);
+    }
+    setActiveTabId(workspaceId);
+
+    if (resolvedDir) {
+      void saveWorkspaceRoot(resolvedDir);
+      void refreshTreeForRoot(resolvedDir);
     }
 
     appendTimeline("Apply template", template.name, `template:${template.id}`, "success");
@@ -1166,9 +1474,15 @@ function App(): JSX.Element {
           command
         }));
         void handleRunPaneCommand(paneId, command);
-      }, 220 * (index + 1));
+      }, 300 * (index + 1));
     });
   };
+
+  const handleOpenFolder = (): void => {
+    setTemplateModalOpen(true);
+  };
+
+  const defaultDirectory = activeRootPath ?? workspaceState.rootPath ?? "~";
 
   return (
     <div className="bridge-app bridge-shell-exact" style={themeStyle}>
@@ -1180,15 +1494,27 @@ function App(): JSX.Element {
             ⚡
           </div>
           <div className="workspace-strip">
-            {workspaceTabs.length === 0 ? (
+            {showSettings ? (
+              <button
+                className="workspace-pill settings-pill active"
+                onClick={() => setShowSettings(true)}
+                type="button"
+              >
+                <span className="pill-name">⚙ Settings</span>
+              </button>
+            ) : null}
+            {workspaceTabs.length === 0 && !showSettings ? (
               <span className="no-workspaces">No workspaces open</span>
             ) : (
               workspaceTabs.map((tab) => (
                 <button
                   aria-label={`${tab.name} workspace tab`}
-                  className={`workspace-pill ${activeTabId === tab.id ? "active" : ""}`}
+                  className={`workspace-pill ${activeTabId === tab.id && !showSettings ? "active" : ""}`}
                   key={tab.id}
-                  onClick={() => handleTabSelect(tab.id)}
+                  onClick={() => {
+                    setShowSettings(false);
+                    handleTabSelect(tab.id);
+                  }}
                   title={`${tab.branch} | ${HEALTH_LABELS[tab.health]}`}
                   type="button"
                 >
@@ -1202,12 +1528,23 @@ function App(): JSX.Element {
             </button>
           </div>
         </div>
-        <button className="icon-button" type="button" title={runtimeNotice}>
+        <button
+          className={`icon-button ${showSettings ? "active" : ""}`}
+          onClick={() => setShowSettings((prev) => !prev)}
+          title="Settings"
+          type="button"
+        >
           ⚙
         </button>
       </header>
 
-      {workspaceTabs.length === 0 ? (
+      {showSettings ? (
+        <SettingsView
+          activeThemeId={themeId}
+          onThemeChange={setThemeId}
+          themes={THEMES}
+        />
+      ) : workspaceTabs.length === 0 ? (
         <section className="welcome-shell">
           <div className="welcome-title-wrap">
             <h1>OpenSpace</h1>
@@ -1218,7 +1555,7 @@ function App(): JSX.Element {
             <button className="solid-button" onClick={() => setTemplateModalOpen(true)} type="button">
               ↳ New Workspace
             </button>
-            <button className="text-button" onClick={() => setTemplateModalOpen(true)} type="button">
+            <button className="text-button" onClick={handleOpenFolder} type="button">
               ☐ Open Folder
             </button>
           </div>
@@ -1229,17 +1566,17 @@ function App(): JSX.Element {
             </header>
             <div className="shortcut-grid">
               <span>New Workspace</span>
-              <kbd>⌘T</kbd>
+              <kbd>Ctrl+T</kbd>
               <span>Navigate Panes</span>
-              <kbd>⌘] / ⌘[</kbd>
+              <kbd>Ctrl+] / [</kbd>
               <span>New Terminal</span>
-              <kbd>⌘N</kbd>
+              <kbd>Ctrl+N</kbd>
               <span>Quick Open File</span>
-              <kbd>⌘P</kbd>
+              <kbd>Ctrl+P</kbd>
               <span>Search Terminal</span>
-              <kbd>⌘F</kbd>
+              <kbd>Ctrl+F</kbd>
               <span>Settings</span>
-              <kbd>⌘,</kbd>
+              <kbd>Ctrl+,</kbd>
             </div>
           </div>
         </section>
@@ -1263,6 +1600,7 @@ function App(): JSX.Element {
 
       {isTemplateModalOpen ? (
         <TemplatePickerModal
+          defaultDirectory={defaultDirectory}
           onApply={handleApplyTemplate}
           onClose={() => setTemplateModalOpen(false)}
           templates={TEMPLATES}
