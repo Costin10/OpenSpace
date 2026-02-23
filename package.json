@@ -1,0 +1,28 @@
+{
+  "name": "openspace",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Linux-first Tauri v2 + React + TypeScript skeleton",
+  "scripts": {
+    "dev": "tauri dev",
+    "dev:web": "vite --config vite.config.ts",
+    "build": "npm run typecheck && tauri build",
+    "build:web": "vite build --config vite.config.ts",
+    "preview": "vite preview --config vite.config.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "@types/node": "^20.17.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.8"
+  }
+}
