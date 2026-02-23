@@ -363,6 +363,50 @@ interface TemplatePickerModalProps {
   onClose: () => void;
 }
 
+const LAYOUT_OPTIONS: { panes: number; label: string; cols: number; rows: number }[] = [
+  { panes: 1, label: "Single", cols: 1, rows: 1 },
+  { panes: 2, label: "2", cols: 2, rows: 1 },
+  { panes: 4, label: "4", cols: 2, rows: 2 },
+  { panes: 6, label: "6", cols: 3, rows: 2 },
+  { panes: 8, label: "8", cols: 4, rows: 2 },
+  { panes: 10, label: "10", cols: 5, rows: 2 },
+  { panes: 12, label: "12", cols: 4, rows: 3 },
+  { panes: 14, label: "14", cols: 7, rows: 2 },
+  { panes: 16, label: "16", cols: 4, rows: 4 }
+];
+
+const AI_AGENTS: { name: string; model: string }[] = [
+  { name: "Claude", model: "claude" },
+  { name: "Codex", model: "codex" },
+  { name: "Gemini", model: "gemini" },
+  { name: "Cursor", model: "agent" },
+  { name: "OpenCode", model: "opencode" }
+];
+
+const LayoutGridIcon = ({ cols, rows }: { cols: number; rows: number }): JSX.Element => {
+  const dots: JSX.Element[] = [];
+  const total = cols * rows;
+  for (let i = 0; i < total; i += 1) {
+    dots.push(<span className="grid-dot" key={i} />);
+  }
+  return (
+    <div
+      className="layout-grid-icon"
+      style={{
+        gridTemplateColumns: `repeat(${cols}, 1fr)`,
+        gridTemplateRows: `repeat(${rows}, 1fr)`
+      }}
+    >
+      {dots}
+    </div>
+  );
+};
+
+const layoutDescriptionFor = (panes: number, cols: number, rows: number): string => {
+  if (panes === 1) return "Single terminal";
+  return `${cols}×${rows} grid layout`;
+};
+
 const TemplatePickerModal = ({
   templates,
   themeMap,
@@ -370,22 +414,56 @@ const TemplatePickerModal = ({
   onApply,
   onClose
 }: TemplatePickerModalProps): JSX.Element => {
-  const sortedTemplates = [...templates].sort((left, right) => left.defaultPanes - right.defaultPanes);
-  const [selectedTemplateId, setSelectedTemplateId] = useState(sortedTemplates[0]?.id ?? "");
+  const [selectedPanes, setSelectedPanes] = useState(4);
   const [directoryPath, setDirectoryPath] = useState(defaultDirectory || "~");
   const [agentCounts, setAgentCounts] = useState<Record<string, number>>(() =>
-    Object.fromEntries(["Claude", "Codex", "Gemini", "Cursor", "OpenCode"].map((a) => [a, 0]))
+    Object.fromEntries(AI_AGENTS.map((a) => [a.name, 0]))
   );
+  const [agentsCollapsed, setAgentsCollapsed] = useState(false);
 
-  const selectedTemplate =
-    sortedTemplates.find((template) => template.id === selectedTemplateId) ?? sortedTemplates[0] ?? templates[0];
+  const totalAgents = Object.values(agentCounts).reduce((sum, c) => sum + c, 0);
+  const selectedLayout = LAYOUT_OPTIONS.find((l) => l.panes === selectedPanes) ?? LAYOUT_OPTIONS[2];
+
+  const bestTemplate = templates.reduce((best, t) =>
+    Math.abs(t.defaultPanes - selectedPanes) < Math.abs(best.defaultPanes - selectedPanes) ? t : best
+  , templates[0]);
 
   const adjustAgent = (agent: string, delta: number): void => {
     setAgentCounts((prev) => ({
       ...prev,
-      [agent]: Math.max(0, Math.min(5, (prev[agent] ?? 0) + delta))
+      [agent]: Math.max(0, Math.min(selectedPanes, (prev[agent] ?? 0) + delta))
     }));
   };
+
+  const selectAllAgents = (): void => {
+    const perAgent = Math.floor(selectedPanes / AI_AGENTS.length);
+    let remainder = selectedPanes - perAgent * AI_AGENTS.length;
+    setAgentCounts(Object.fromEntries(AI_AGENTS.map((a, i) => {
+      const extra = i < remainder ? 1 : 0;
+      return [a.name, perAgent + extra];
+    })));
+  };
+
+  const oneEachAgent = (): void => {
+    setAgentCounts(Object.fromEntries(
+      AI_AGENTS.map((a) => [a.name, 1])
+    ));
+  };
+
+  const fillEvenlyAgents = (): void => {
+    const perAgent = Math.floor(selectedPanes / AI_AGENTS.length);
+    let remainder = selectedPanes - perAgent * AI_AGENTS.length;
+    setAgentCounts(Object.fromEntries(AI_AGENTS.map((a, i) => {
+      const extra = i < remainder ? 1 : 0;
+      return [a.name, perAgent + extra];
+    })));
+  };
+
+  const clearAgents = (): void => {
+    setAgentCounts(Object.fromEntries(AI_AGENTS.map((a) => [a.name, 0])));
+  };
+
+  const usagePercent = Math.min(100, (totalAgents / selectedPanes) * 100);
 
   return (
     <div className="modal-overlay" onClick={onClose} role="presentation">
@@ -397,59 +475,115 @@ const TemplatePickerModal = ({
       >
         <header className="modal-header">
           <h3>New Workspace</h3>
-          <button className="text-button" onClick={onClose} type="button">
+          <button className="modal-close-btn" onClick={onClose} type="button">
             ×
           </button>
         </header>
 
-        <div className="modal-section">
-          <span className="section-label">Layout</span>
-          <div className="layout-picker-grid">
-            {sortedTemplates.map((template) => (
+        <div className="modal-body">
+          <div className="modal-section">
+            <span className="section-label">Layout</span>
+            <div className="layout-picker-grid">
+              {LAYOUT_OPTIONS.map((layout) => (
+                <button
+                  className={`layout-tile ${selectedPanes === layout.panes ? "selected" : ""}`}
+                  key={layout.panes}
+                  onClick={() => setSelectedPanes(layout.panes)}
+                  type="button"
+                >
+                  <LayoutGridIcon cols={layout.cols} rows={layout.rows} />
+                  <span className="layout-tile-label">{layout.label}</span>
+                </button>
+              ))}
+            </div>
+            <p className="modal-hint">
+              {layoutDescriptionFor(selectedLayout.panes, selectedLayout.cols, selectedLayout.rows)}
+            </p>
+          </div>
+
+          <div className="modal-section">
+            <span className="section-label">Directory</span>
+            <div className="directory-row">
+              <span className="directory-icon">📁</span>
+              <input
+                className="directory-input"
+                onChange={(event) => setDirectoryPath(event.target.value)}
+                placeholder="~/Desktop"
+                type="text"
+                value={directoryPath}
+              />
+              <button className="directory-browse-btn" type="button">
+                Browse
+              </button>
+            </div>
+          </div>
+
+          <div className="modal-section agents-section">
+            <div className="agents-header">
+              <div className="agents-header-left">
+                <button
+                  className="agents-collapse-toggle"
+                  onClick={() => setAgentsCollapsed((prev) => !prev)}
+                  type="button"
+                >
+                  {agentsCollapsed ? "▸" : "▾"}
+                </button>
+                <span className="section-label">AI Agents</span>
+                <span className="agents-badge">{totalAgents}</span>
+              </div>
               <button
-                className={`layout-tile ${selectedTemplate?.id === template.id ? "selected" : ""}`}
-                key={template.id}
-                onClick={() => setSelectedTemplateId(template.id)}
+                className="collapse-text"
+                onClick={() => setAgentsCollapsed((prev) => !prev)}
                 type="button"
               >
-                <span className="layout-icon">▦</span>
-                <span>{template.defaultPanes}</span>
+                {agentsCollapsed ? "expand" : "collapse"}
               </button>
-            ))}
-          </div>
-          <p className="modal-hint">
-            {selectedTemplate?.defaultPanes ?? 1} panes | {themeMap[selectedTemplate?.suggestedThemeId ?? ""] ?? selectedTemplate?.suggestedThemeId}
-          </p>
-        </div>
-
-        <div className="modal-section">
-          <span className="section-label">Directory</span>
-          <div className="directory-row">
-            <input
-              className="directory-input"
-              onChange={(event) => setDirectoryPath(event.target.value)}
-              placeholder="/home/user/project"
-              type="text"
-              value={directoryPath}
-            />
-          </div>
-        </div>
-
-        <div className="modal-section agents-list">
-          <div className="agents-header">
-            <span className="section-label">AI Agents</span>
-            <span className="collapse-text">collapse</span>
-          </div>
-          {["Claude", "Codex", "Gemini", "Cursor", "OpenCode"].map((agent) => (
-            <div className="agent-row" key={agent}>
-              <span>{agent}</span>
-              <span className="agent-controls">
-                <button className="agent-btn" onClick={() => adjustAgent(agent, -1)} type="button">−</button>
-                <span>{agentCounts[agent] ?? 0}</span>
-                <button className="agent-btn" onClick={() => adjustAgent(agent, 1)} type="button">+</button>
-              </span>
             </div>
-          ))}
+
+            {!agentsCollapsed && (
+              <>
+                <div className="agents-batch-actions">
+                  <button className="batch-btn" onClick={selectAllAgents} type="button">Select All</button>
+                  <button className="batch-btn" onClick={oneEachAgent} type="button">1 Each</button>
+                  <button className="batch-btn" onClick={fillEvenlyAgents} type="button">Fill Evenly</button>
+                  <button className="batch-btn" onClick={clearAgents} type="button">Clear</button>
+                </div>
+
+                <div className="agents-list-rows">
+                  {AI_AGENTS.map((agent) => {
+                    const count = agentCounts[agent.name] ?? 0;
+                    const isActive = count > 0;
+                    return (
+                      <div className={`agent-row ${isActive ? "active" : ""}`} key={agent.name}>
+                        <div className="agent-row-left">
+                          <span className={`agent-checkbox ${isActive ? "checked" : ""}`}>
+                            {isActive ? "✓" : ""}
+                          </span>
+                          <strong className="agent-name">{agent.name}</strong>
+                          <span className="agent-model">{agent.model}</span>
+                        </div>
+                        <span className="agent-controls">
+                          <button className="agent-btn" onClick={() => adjustAgent(agent.name, -1)} type="button">−</button>
+                          <span className="agent-count">{count}</span>
+                          <button className="agent-btn" onClick={() => adjustAgent(agent.name, 1)} type="button">+</button>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="terminal-usage-bar">
+                  <div className="usage-track">
+                    <div
+                      className={`usage-fill ${usagePercent >= 100 ? "full" : usagePercent > 0 ? "partial" : ""}`}
+                      style={{ width: `${usagePercent}%` }}
+                    />
+                  </div>
+                  <span className="usage-label">{totalAgents} / {selectedPanes} terminals</span>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         <footer className="modal-footer">
@@ -458,10 +592,10 @@ const TemplatePickerModal = ({
           </button>
           <button
             className="solid-button"
-            onClick={() => selectedTemplate && onApply(selectedTemplate, directoryPath)}
+            onClick={() => bestTemplate && onApply(bestTemplate, directoryPath)}
             type="button"
           >
-            Create
+            Next
           </button>
         </footer>
       </section>
