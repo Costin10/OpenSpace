@@ -298,6 +298,7 @@ const readTasksFromState = (state: TaskState): KanbanCard[] =>
 
 export interface RendererBridge {
   hasBackend: () => boolean;
+  pickFolder: () => Promise<string | null>;
   loadWorkspaceState: () => Promise<WorkspaceState>;
   saveWorkspaceState: (state: WorkspaceState) => Promise<WorkspaceState>;
   loadKanbanCards: () => Promise<KanbanCard[]>;
@@ -317,6 +318,41 @@ export interface RendererBridge {
 
 export const rendererBridge: RendererBridge = {
   hasBackend: hasTauriRuntime,
+
+  pickFolder: async () => {
+    if (!hasTauriRuntime()) {
+      placeholderLog("dialog.pickFolder");
+      return null;
+    }
+
+    try {
+      const dialogModule = (await import(
+        /* @vite-ignore */ "@tauri-apps/plugin-dialog"
+      )) as { open?: (options: Record<string, unknown>) => Promise<string | string[] | null> };
+
+      if (typeof dialogModule.open !== "function") {
+        console.error("dialog plugin missing open()");
+        return null;
+      }
+
+      const result = await dialogModule.open({
+        directory: true,
+        multiple: false,
+        title: "Select workspace folder"
+      });
+
+      if (typeof result === "string") {
+        return result;
+      }
+      if (Array.isArray(result) && result.length > 0) {
+        return result[0];
+      }
+      return null;
+    } catch (error) {
+      console.error("pickFolder failed", error);
+      return null;
+    }
+  },
 
   loadWorkspaceState: async () => {
     if (!hasTauriRuntime()) {

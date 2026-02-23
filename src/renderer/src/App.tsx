@@ -13,7 +13,7 @@ import { WebglAddon } from "@xterm/addon-webgl";
 import { Terminal } from "@xterm/xterm";
 import { basicSetup } from "codemirror";
 import type { IDisposable, ITerminalOptions } from "@xterm/xterm";
-import { rendererBridge } from "./bridge/openspaceBridge";
+import { rendererBridge } from "./bridge/openspace";
 import {
   DOCUMENTS,
   FILE_TREE,
@@ -469,7 +469,7 @@ const TemplatePickerModal = ({
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <section
         aria-modal
-        className="template-modal new-workspace-modal"
+        className="new-workspace-modal"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
@@ -512,7 +512,14 @@ const TemplatePickerModal = ({
                 type="text"
                 value={directoryPath}
               />
-              <button className="directory-browse-btn" type="button">
+              <button
+                className="directory-browse-btn"
+                onClick={async () => {
+                  const folder = await rendererBridge.pickFolder();
+                  if (folder) setDirectoryPath(folder);
+                }}
+                type="button"
+              >
                 Browse
               </button>
             </div>
@@ -976,13 +983,20 @@ function App(): JSX.Element {
   const [kanbanCards, setKanbanCards] = useState(KANBAN_CARDS);
   const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
   const [isTemplateModalOpen, setTemplateModalOpen] = useState(false);
-  const [themeId, setThemeId] = useState(THEMES[0]?.id ?? "");
+  const [themeId, setThemeId] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem("openspace:themeId");
+      if (saved && THEMES.some((t) => t.id === saved)) return saved;
+    } catch { /* ignore */ }
+    return THEMES[0]?.id ?? "";
+  });
   const [runtimeNotice, setRuntimeNotice] = useState<string>(
     rendererBridge.hasBackend() ? "Backend connected" : "Renderer-only placeholder mode"
   );
   const [isSaving, setIsSaving] = useState(false);
   const [terminalHostVersion, setTerminalHostVersion] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
+  const [defaultDirectoryOverride, setDefaultDirectoryOverride] = useState<string | null>(null);
 
   const terminalRuntimesRef = useRef<Map<string, TerminalRuntime>>(new Map());
   const terminalHostsRef = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -996,6 +1010,12 @@ function App(): JSX.Element {
     [themeId]
   );
   const themeStyle = activeTheme.vars as CSSProperties;
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("openspace:themeId", themeId);
+    } catch { /* ignore */ }
+  }, [themeId]);
 
   const selectedNode = useMemo(() => findNodeById(fileTree, selectedFileId), [fileTree, selectedFileId]);
   const selectedDocument = documents[selectedFileId];
@@ -1612,11 +1632,23 @@ function App(): JSX.Element {
     });
   };
 
-  const handleOpenFolder = (): void => {
-    setTemplateModalOpen(true);
+  const handleOpenFolder = async (): Promise<void> => {
+    const folder = await rendererBridge.pickFolder();
+    if (folder) {
+      setDefaultDirectoryOverride(folder);
+      setTemplateModalOpen(true);
+    }
   };
 
-  const defaultDirectory = activeRootPath ?? workspaceState.rootPath ?? "~";
+  const defaultDirectory = defaultDirectoryOverride ?? activeRootPath ?? workspaceState.rootPath ?? "~";
+
+  const handleNewWorkspace = async (): Promise<void> => {
+    const folder = await rendererBridge.pickFolder();
+    if (folder) {
+      setDefaultDirectoryOverride(folder);
+      setTemplateModalOpen(true);
+    }
+  };
 
   return (
     <div className="openspace-app openspace-shell-exact" style={themeStyle}>
@@ -1657,7 +1689,7 @@ function App(): JSX.Element {
                 </button>
               ))
             )}
-            <button className="icon-button" onClick={() => setTemplateModalOpen(true)} type="button" title="New workspace">
+            <button className="icon-button" onClick={() => void handleNewWorkspace()} type="button" title="New workspace">
               +
             </button>
           </div>
@@ -1686,11 +1718,11 @@ function App(): JSX.Element {
           </div>
 
           <div className="welcome-actions">
-            <button className="solid-button" onClick={() => setTemplateModalOpen(true)} type="button">
-              ↳ New Workspace
+            <button className="solid-button" onClick={() => void handleNewWorkspace()} type="button">
+              + New Workspace
             </button>
-            <button className="text-button" onClick={handleOpenFolder} type="button">
-              ☐ Open Folder
+            <button className="text-button" onClick={() => void handleOpenFolder()} type="button">
+              📂 Open Folder
             </button>
           </div>
 
@@ -1736,7 +1768,10 @@ function App(): JSX.Element {
         <TemplatePickerModal
           defaultDirectory={defaultDirectory}
           onApply={handleApplyTemplate}
-          onClose={() => setTemplateModalOpen(false)}
+          onClose={() => {
+            setTemplateModalOpen(false);
+            setDefaultDirectoryOverride(null);
+          }}
           templates={TEMPLATES}
           themeMap={themeMap}
         />

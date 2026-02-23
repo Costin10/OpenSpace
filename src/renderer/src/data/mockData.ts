@@ -59,7 +59,7 @@ export const FILE_TREE: FileNode[] = [
         children: [
           { id: "file-app", name: "App.tsx", kind: "file", language: "tsx" },
           { id: "file-shell-css", name: "openspace.css", kind: "file", language: "css" },
-          { id: "file-renderer", name: "openspaceBridge.ts", kind: "file", language: "ts" }
+          { id: "file-renderer", name: "openspace.ts", kind: "file", language: "ts" }
         ]
       },
       {
@@ -115,7 +115,7 @@ export const App = () => {
   },
   "file-renderer": {
     fileId: "file-renderer",
-    title: "openspaceBridge.ts",
+    title: "openspace.ts",
     language: "ts",
     updatedAt: "08:41",
     content: `export interface RendererBridge {

@@ -154,8 +154,18 @@ fn io_error(message: &str, error: std::io::Error) -> String {
   format!("{message}: {error}")
 }
 
+fn expand_tilde(input: &str) -> String {
+  if input == "~" || input.starts_with("~/") {
+    if let Ok(home) = std::env::var("HOME") {
+      return input.replacen('~', &home, 1);
+    }
+  }
+  input.to_string()
+}
+
 fn resolve_path(input: &str) -> Result<PathBuf, String> {
-  let candidate = PathBuf::from(input);
+  let expanded = expand_tilde(input);
+  let candidate = PathBuf::from(&expanded);
   if candidate.is_absolute() {
     return Ok(candidate);
   }
@@ -601,6 +611,7 @@ fn main() {
   };
 
   tauri::Builder::default()
+    .plugin(tauri_plugin_dialog::init())
     .manage(AppState::default())
     .manage(StartupContext {
       root_path: startup_root_path
