@@ -49,7 +49,7 @@ export interface CommandTimelineEvent {
   status: TerminalStatus;
 }
 
-export type KanbanLane = "todo" | "in-progress" | "in-review" | "complete";
+export type KanbanLane = "todo" | "in-progress" | "in-review" | "complete" | "cancelled";
 export type KanbanPriority = "p1" | "p2" | "p3";
 
 export interface KanbanCard {

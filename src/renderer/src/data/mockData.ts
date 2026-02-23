@@ -10,13 +10,14 @@ import type {
   WorkspaceTab
 } from "../types/ui";
 
-export const LANE_ORDER: KanbanLane[] = ["todo", "in-progress", "in-review", "complete"];
+export const LANE_ORDER: KanbanLane[] = ["todo", "in-progress", "in-review", "complete", "cancelled"];
 
 export const LANE_LABELS: Record<KanbanLane, string> = {
   todo: "Todo",
   "in-progress": "In Progress",
   "in-review": "In Review",
-  complete: "Complete"
+  complete: "Complete",
+  cancelled: "Cancelled"
 };
 
 export const WORKSPACE_TABS: WorkspaceTab[] = [
@@ -251,53 +252,16 @@ export const KANBAN_CARDS: KanbanCard[] = [
 
 export const THEMES: ThemeDefinition[] = [
   {
-    id: "cobalt-grid",
-    label: "DeepMind",
-    description: "Cool cyan energy with electric highlights.",
-    kind: "dark",
-    vars: {
-      "--bg-root": "#070c14",
-      "--bg-shell": "#0d1624",
-      "--bg-panel": "#101d2f",
-      "--bg-raised": "#13253a",
-      "--border-soft": "#2c4d6f",
-      "--border-strong": "#3f78b3",
-      "--text-primary": "#e7f5ff",
-      "--text-muted": "#95b7d3",
-      "--accent": "#00d8ff",
-      "--accent-alt": "#ffc247",
-      "--success": "#00f7a1",
-      "--warning": "#ffc247",
-      "--danger": "#ff5c81",
-      "--overlay": "rgba(1, 6, 12, 0.72)",
-      "--shadow": "rgba(0, 216, 255, 0.22)",
-      "--stripe-a": "rgba(0, 216, 255, 0.06)",
-      "--stripe-b": "rgba(255, 194, 71, 0.04)"
-    }
-  },
-  {
     id: "void",
     label: "Void",
     description: "Near-black with subtle violet undertones.",
     kind: "dark",
     vars: {
-      "--bg-root": "#06050e",
-      "--bg-shell": "#0c0a18",
-      "--bg-panel": "#110e22",
-      "--bg-raised": "#17132e",
-      "--border-soft": "#2a2350",
-      "--border-strong": "#4a3d8a",
-      "--text-primary": "#e6e0ff",
-      "--text-muted": "#9b8fc6",
-      "--accent": "#8b7aff",
-      "--accent-alt": "#ff6bda",
-      "--success": "#5dff9e",
-      "--warning": "#ffcb4d",
-      "--danger": "#ff5c7a",
-      "--overlay": "rgba(4, 3, 10, 0.78)",
-      "--shadow": "rgba(139, 122, 255, 0.22)",
-      "--stripe-a": "rgba(139, 122, 255, 0.05)",
-      "--stripe-b": "rgba(255, 107, 218, 0.04)"
+      "--surface": "#0a0a10", "--surface-hover": "#11111a", "--background": "#040407",
+      "--panel": "#0a0a10", "--border": "#1e1e2e", "--border-active": "#6366f1bf",
+      "--text-primary": "#eef", "--text-secondary": "#9898cc", "--text-muted": "#4a4a70",
+      "--accent-blue": "#6366f1", "--accent-cyan": "#818cf8", "--accent-green": "#34d399",
+      "--accent-yellow": "#fbbf24", "--accent-red": "#f43f5e", "--accent-magenta": "#e879f9"
     }
   },
   {
@@ -306,23 +270,11 @@ export const THEMES: ThemeDefinition[] = [
     description: "Gray-toned stealth with pale accents.",
     kind: "dark",
     vars: {
-      "--bg-root": "#0a0b0e",
-      "--bg-shell": "#111318",
-      "--bg-panel": "#171a20",
-      "--bg-raised": "#1e2128",
-      "--border-soft": "#2f343e",
-      "--border-strong": "#4a5060",
-      "--text-primary": "#e0e3ea",
-      "--text-muted": "#8b919e",
-      "--accent": "#a0b4d0",
-      "--accent-alt": "#7ecfcf",
-      "--success": "#6dd89a",
-      "--warning": "#d4b45e",
-      "--danger": "#d06666",
-      "--overlay": "rgba(8, 9, 12, 0.78)",
-      "--shadow": "rgba(100, 120, 150, 0.18)",
-      "--stripe-a": "rgba(160, 180, 208, 0.04)",
-      "--stripe-b": "rgba(126, 207, 207, 0.03)"
+      "--surface": "#0f0f10", "--surface-hover": "#151517", "--background": "#080808",
+      "--panel": "#0f0f10", "--border": "#1e1e22", "--border-active": "#10d5a9bf",
+      "--text-primary": "#f0f0f2", "--text-secondary": "#8a8a9a", "--text-muted": "#3e3e50",
+      "--accent-blue": "#60a5fa", "--accent-cyan": "#10d5a9", "--accent-green": "#86efac",
+      "--accent-yellow": "#fde68a", "--accent-red": "#fb7185", "--accent-magenta": "#c084fc"
     }
   },
   {
@@ -331,23 +283,11 @@ export const THEMES: ThemeDefinition[] = [
     description: "Deep purple with vibrant magenta accents.",
     kind: "dark",
     vars: {
-      "--bg-root": "#0d071a",
-      "--bg-shell": "#150e28",
-      "--bg-panel": "#1c1434",
-      "--bg-raised": "#241a42",
-      "--border-soft": "#3d2d68",
-      "--border-strong": "#6a4aa8",
-      "--text-primary": "#f0e4ff",
-      "--text-muted": "#b49dda",
-      "--accent": "#d04aff",
-      "--accent-alt": "#ff4a9e",
-      "--success": "#4affa4",
-      "--warning": "#ffc44a",
-      "--danger": "#ff4a6a",
-      "--overlay": "rgba(10, 5, 20, 0.78)",
-      "--shadow": "rgba(208, 74, 255, 0.22)",
-      "--stripe-a": "rgba(208, 74, 255, 0.06)",
-      "--stripe-b": "rgba(255, 74, 158, 0.04)"
+      "--surface": "#0f0020", "--surface-hover": "#160030", "--background": "#070013",
+      "--panel": "#0f0020", "--border": "#2a0048", "--border-active": "#e040fbd9",
+      "--text-primary": "#f4e8ff", "--text-secondary": "#bc88f0", "--text-muted": "#6a3d90",
+      "--accent-blue": "#818cf8", "--accent-cyan": "#22d3ee", "--accent-green": "#4ade80",
+      "--accent-yellow": "#fbbf24", "--accent-red": "#f43f5e", "--accent-magenta": "#e040fb"
     }
   },
   {
@@ -356,23 +296,24 @@ export const THEMES: ThemeDefinition[] = [
     description: "Ultra-dark with sharp gray contrasts.",
     kind: "dark",
     vars: {
-      "--bg-root": "#080808",
-      "--bg-shell": "#0f0f0f",
-      "--bg-panel": "#161616",
-      "--bg-raised": "#1c1c1c",
-      "--border-soft": "#303030",
-      "--border-strong": "#505050",
-      "--text-primary": "#e8e8e8",
-      "--text-muted": "#888888",
-      "--accent": "#ff6633",
-      "--accent-alt": "#33ccff",
-      "--success": "#33ff88",
-      "--warning": "#ffbb33",
-      "--danger": "#ff4444",
-      "--overlay": "rgba(6, 6, 6, 0.78)",
-      "--shadow": "rgba(255, 102, 51, 0.18)",
-      "--stripe-a": "rgba(255, 102, 51, 0.04)",
-      "--stripe-b": "rgba(51, 204, 255, 0.03)"
+      "--surface": "#181818", "--surface-hover": "#212121", "--background": "#101010",
+      "--panel": "#181818", "--border": "#2c2c2c", "--border-active": "#f59e0bd9",
+      "--text-primary": "#e8e8e8", "--text-secondary": "#b0b0b0", "--text-muted": "#606060",
+      "--accent-blue": "#60a5fa", "--accent-cyan": "#22d3ee", "--accent-green": "#a3e635",
+      "--accent-yellow": "#f59e0b", "--accent-red": "#ef4444", "--accent-magenta": "#f97316"
+    }
+  },
+  {
+    id: "hex",
+    label: "Hex",
+    description: "Hacker green on deep black.",
+    kind: "dark",
+    vars: {
+      "--surface": "#060f06", "--surface-hover": "#091509", "--background": "#030803",
+      "--panel": "#060f06", "--border": "#0f200f", "--border-active": "#00ff41bf",
+      "--text-primary": "#cfc", "--text-secondary": "#6d6", "--text-muted": "#286628",
+      "--accent-blue": "#0af", "--accent-cyan": "#0d5", "--accent-green": "#00ff41",
+      "--accent-yellow": "#cf0", "--accent-red": "#f44", "--accent-magenta": "#4f8"
     }
   },
   {
@@ -381,48 +322,24 @@ export const THEMES: ThemeDefinition[] = [
     description: "Cyberpunk neon with hot pink and cyan.",
     kind: "dark",
     vars: {
-      "--bg-root": "#0a0812",
-      "--bg-shell": "#12101e",
-      "--bg-panel": "#1a162a",
-      "--bg-raised": "#221d38",
-      "--border-soft": "#38305a",
-      "--border-strong": "#5e4e90",
-      "--text-primary": "#f4eaff",
-      "--text-muted": "#a090c8",
-      "--accent": "#ff2a8a",
-      "--accent-alt": "#00f0ff",
-      "--success": "#00ff88",
-      "--warning": "#ffdd00",
-      "--danger": "#ff4455",
-      "--overlay": "rgba(8, 6, 14, 0.78)",
-      "--shadow": "rgba(255, 42, 138, 0.22)",
-      "--stripe-a": "rgba(255, 42, 138, 0.06)",
-      "--stripe-b": "rgba(0, 240, 255, 0.05)"
+      "--surface": "#12001e", "--surface-hover": "#1a0028", "--background": "#0a0014",
+      "--panel": "#12001e", "--border": "#2d0048", "--border-active": "#ff0080d9",
+      "--text-primary": "#ffe8ff", "--text-secondary": "#c8c", "--text-muted": "#63a",
+      "--accent-blue": "#0ff", "--accent-cyan": "#00e0ff", "--accent-green": "#39ff14",
+      "--accent-yellow": "#ff0", "--accent-red": "#ff0080", "--accent-magenta": "#f0f"
     }
   },
   {
-    id: "amber-circuit",
-    label: "Infrared",
-    description: "Dark ember base with tactical amber accents.",
+    id: "obsidian",
+    label: "Obsidian",
+    description: "Deep indigo with purple accents.",
     kind: "dark",
     vars: {
-      "--bg-root": "#110d0b",
-      "--bg-shell": "#1b1411",
-      "--bg-panel": "#241b16",
-      "--bg-raised": "#2b211b",
-      "--border-soft": "#5c4536",
-      "--border-strong": "#a86f44",
-      "--text-primary": "#fff1df",
-      "--text-muted": "#cfb59b",
-      "--accent": "#ff9f40",
-      "--accent-alt": "#2cfad6",
-      "--success": "#56ffb2",
-      "--warning": "#ffce56",
-      "--danger": "#ff6a6a",
-      "--overlay": "rgba(14, 9, 7, 0.78)",
-      "--shadow": "rgba(255, 159, 64, 0.22)",
-      "--stripe-a": "rgba(255, 159, 64, 0.06)",
-      "--stripe-b": "rgba(44, 250, 214, 0.05)"
+      "--surface": "#0d0a1a", "--surface-hover": "#130f24", "--background": "#06040e",
+      "--panel": "#0d0a1a", "--border": "#1e183a", "--border-active": "#8b5cf6cc",
+      "--text-primary": "#e8e0ff", "--text-secondary": "#9880d0", "--text-muted": "#4a3880",
+      "--accent-blue": "#818cf8", "--accent-cyan": "#34d399", "--accent-green": "#86efac",
+      "--accent-yellow": "#fbbf24", "--accent-red": "#f87171", "--accent-magenta": "#8b5cf6"
     }
   },
   {
@@ -431,23 +348,11 @@ export const THEMES: ThemeDefinition[] = [
     description: "Blue-purple space atmosphere with soft glow.",
     kind: "dark",
     vars: {
-      "--bg-root": "#080a16",
-      "--bg-shell": "#0e1224",
-      "--bg-panel": "#141832",
-      "--bg-raised": "#1a1f40",
-      "--border-soft": "#2d3560",
-      "--border-strong": "#4858a0",
-      "--text-primary": "#e4eaff",
-      "--text-muted": "#8895c8",
-      "--accent": "#6c8aff",
-      "--accent-alt": "#ff82c8",
-      "--success": "#4affba",
-      "--warning": "#ffcc55",
-      "--danger": "#ff5580",
-      "--overlay": "rgba(6, 8, 18, 0.78)",
-      "--shadow": "rgba(108, 138, 255, 0.22)",
-      "--stripe-a": "rgba(108, 138, 255, 0.05)",
-      "--stripe-b": "rgba(255, 130, 200, 0.04)"
+      "--surface": "#060020", "--surface-hover": "#0a0030", "--background": "#030010",
+      "--panel": "#060020", "--border": "#160040", "--border-active": "#c084fcd9",
+      "--text-primary": "#f0e8ff", "--text-secondary": "#b085e8", "--text-muted": "#5a3080",
+      "--accent-blue": "#818cf8", "--accent-cyan": "#67e8f9", "--accent-green": "#34d399",
+      "--accent-yellow": "#fbbf24", "--accent-red": "#f472b6", "--accent-magenta": "#c084fc"
     }
   },
   {
@@ -456,73 +361,37 @@ export const THEMES: ThemeDefinition[] = [
     description: "Steel blue atmosphere under dark skies.",
     kind: "dark",
     vars: {
-      "--bg-root": "#090c12",
-      "--bg-shell": "#0e1420",
-      "--bg-panel": "#141c2c",
-      "--bg-raised": "#1a2438",
-      "--border-soft": "#2a3a54",
-      "--border-strong": "#3e5878",
-      "--text-primary": "#dde6f0",
-      "--text-muted": "#7e96b0",
-      "--accent": "#4a90d8",
-      "--accent-alt": "#d8904a",
-      "--success": "#3ec890",
-      "--warning": "#d8a84a",
-      "--danger": "#d84a5a",
-      "--overlay": "rgba(7, 10, 15, 0.78)",
-      "--shadow": "rgba(74, 144, 216, 0.18)",
-      "--stripe-a": "rgba(74, 144, 216, 0.04)",
-      "--stripe-b": "rgba(216, 144, 74, 0.03)"
+      "--surface": "#131b24", "--surface-hover": "#1a2333", "--background": "#0c1016",
+      "--panel": "#131b24", "--border": "#243040", "--border-active": "#fde047d9",
+      "--text-primary": "#e8eef8", "--text-secondary": "#89b", "--text-muted": "#456",
+      "--accent-blue": "#60a5fa", "--accent-cyan": "#22d3ee", "--accent-green": "#4ade80",
+      "--accent-yellow": "#fde047", "--accent-red": "#f87171", "--accent-magenta": "#f472b6"
     }
   },
   {
-    id: "emerald-scan",
-    label: "Hologram",
-    description: "Operations green with high-contrast text and glow.",
+    id: "infrared",
+    label: "Infrared",
+    description: "Dark ember base with tactical amber accents.",
     kind: "dark",
     vars: {
-      "--bg-root": "#08110d",
-      "--bg-shell": "#0f1b15",
-      "--bg-panel": "#13241c",
-      "--bg-raised": "#193126",
-      "--border-soft": "#2f5944",
-      "--border-strong": "#3eb67a",
-      "--text-primary": "#e8fff2",
-      "--text-muted": "#9ac8b0",
-      "--accent": "#40ffb8",
-      "--accent-alt": "#1fd2ff",
-      "--success": "#59ff86",
-      "--warning": "#ffd66d",
-      "--danger": "#ff6d8e",
-      "--overlay": "rgba(5, 12, 9, 0.78)",
-      "--shadow": "rgba(64, 255, 184, 0.22)",
-      "--stripe-a": "rgba(64, 255, 184, 0.06)",
-      "--stripe-b": "rgba(31, 210, 255, 0.04)"
+      "--surface": "#1a0500", "--surface-hover": "#250800", "--background": "#0c0200",
+      "--panel": "#1a0500", "--border": "#3d1000", "--border-active": "#ff6b35d9",
+      "--text-primary": "#fff4ee", "--text-secondary": "#d97", "--text-muted": "#7a3a22",
+      "--accent-blue": "#fb923c", "--accent-cyan": "#fbbf24", "--accent-green": "#a3e635",
+      "--accent-yellow": "#ff6b35", "--accent-red": "#dc2626", "--accent-magenta": "#f97316"
     }
   },
   {
-    id: "dracula",
-    label: "Dracula",
-    description: "Classic Dracula palette with purple and pink.",
+    id: "nova",
+    label: "Nova",
+    description: "Cosmic dark with warm orange glow.",
     kind: "dark",
     vars: {
-      "--bg-root": "#282a36",
-      "--bg-shell": "#21222c",
-      "--bg-panel": "#2c2e3e",
-      "--bg-raised": "#343648",
-      "--border-soft": "#44475a",
-      "--border-strong": "#6272a4",
-      "--text-primary": "#f8f8f2",
-      "--text-muted": "#6272a4",
-      "--accent": "#bd93f9",
-      "--accent-alt": "#ff79c6",
-      "--success": "#50fa7b",
-      "--warning": "#f1fa8c",
-      "--danger": "#ff5555",
-      "--overlay": "rgba(30, 31, 42, 0.78)",
-      "--shadow": "rgba(189, 147, 249, 0.18)",
-      "--stripe-a": "rgba(189, 147, 249, 0.04)",
-      "--stripe-b": "rgba(255, 121, 198, 0.04)"
+      "--surface": "#0c0312", "--surface-hover": "#12051c", "--background": "#050208",
+      "--panel": "#0c0312", "--border": "#200a30", "--border-active": "#f97316d9",
+      "--text-primary": "#fff8f0", "--text-secondary": "#d9a880", "--text-muted": "#705040",
+      "--accent-blue": "#818cf8", "--accent-cyan": "#22d3ee", "--accent-green": "#4ade80",
+      "--accent-yellow": "#fbbf24", "--accent-red": "#ef4444", "--accent-magenta": "#f97316"
     }
   },
   {
@@ -531,23 +400,50 @@ export const THEMES: ThemeDefinition[] = [
     description: "Minimal dark with faint monochrome accents.",
     kind: "dark",
     vars: {
-      "--bg-root": "#060608",
-      "--bg-shell": "#0c0c10",
-      "--bg-panel": "#121218",
-      "--bg-raised": "#18181f",
-      "--border-soft": "#252530",
-      "--border-strong": "#38384a",
-      "--text-primary": "#d0d0dd",
-      "--text-muted": "#6e6e85",
-      "--accent": "#8888aa",
-      "--accent-alt": "#55aabb",
-      "--success": "#55aa77",
-      "--warning": "#aa9955",
-      "--danger": "#aa5555",
-      "--overlay": "rgba(4, 4, 6, 0.78)",
-      "--shadow": "rgba(100, 100, 130, 0.15)",
-      "--stripe-a": "rgba(136, 136, 170, 0.03)",
-      "--stripe-b": "rgba(85, 170, 187, 0.03)"
+      "--surface": "#141818", "--surface-hover": "#1c2222", "--background": "#0d0f0f",
+      "--panel": "#141818", "--border": "#252e2e", "--border-active": "#34d39999",
+      "--text-primary": "#c8d8d0", "--text-secondary": "#708878", "--text-muted": "#384840",
+      "--accent-blue": "#4d9e8e", "--accent-cyan": "#34d399", "--accent-green": "#84cc16",
+      "--accent-yellow": "#a3a046", "--accent-red": "#dc2626", "--accent-magenta": "#64748b"
+    }
+  },
+  {
+    id: "hologram",
+    label: "Hologram",
+    description: "Deep navy with electric cyan accents.",
+    kind: "dark",
+    vars: {
+      "--surface": "#04101e", "--surface-hover": "#06162a", "--background": "#020810",
+      "--panel": "#04101e", "--border": "#0a2040", "--border-active": "#00d4ffd9",
+      "--text-primary": "#e0f6ff", "--text-secondary": "#7dcff0", "--text-muted": "#2a6888",
+      "--accent-blue": "#00d4ff", "--accent-cyan": "#38bdf8", "--accent-green": "#34d399",
+      "--accent-yellow": "#fbbf24", "--accent-red": "#f87171", "--accent-magenta": "#a78bfa"
+    }
+  },
+  {
+    id: "dracula",
+    label: "Dracula",
+    description: "Classic Dracula palette with purple and pink.",
+    kind: "dark",
+    vars: {
+      "--surface": "#24253a", "--surface-hover": "#2e2f47", "--background": "#1a1b2e",
+      "--panel": "#24253a", "--border": "#44475a", "--border-active": "#bd93f9d9",
+      "--text-primary": "#f8f8f2", "--text-secondary": "#ccc9f4", "--text-muted": "#6272a4",
+      "--accent-blue": "#8be9fd", "--accent-cyan": "#8be9fd", "--accent-green": "#50fa7b",
+      "--accent-yellow": "#f1fa8c", "--accent-red": "#f55", "--accent-magenta": "#ff79c6"
+    }
+  },
+  {
+    id: "bridgemind",
+    label: "BridgeMind",
+    description: "Deep AI-core theme with electric cyan glow.",
+    kind: "dark",
+    vars: {
+      "--surface": "#080c14", "--surface-hover": "#0f1420", "--background": "#030508",
+      "--panel": "#080c14", "--border": "#141e30", "--border-active": "#00e5ffcc",
+      "--text-primary": "#eef2ff", "--text-secondary": "#8ba3d0", "--text-muted": "#3a5070",
+      "--accent-blue": "#3b82f6", "--accent-cyan": "#00e5ff", "--accent-green": "#10ffb0",
+      "--accent-yellow": "#fc0", "--accent-red": "#ff3370", "--accent-magenta": "#bf5af2"
     }
   },
   {
@@ -556,23 +452,11 @@ export const THEMES: ThemeDefinition[] = [
     description: "Warm off-white with soft ink accents.",
     kind: "light",
     vars: {
-      "--bg-root": "#faf8f5",
-      "--bg-shell": "#f2efe9",
-      "--bg-panel": "#eae6de",
-      "--bg-raised": "#e2ded5",
-      "--border-soft": "#d0cbc0",
-      "--border-strong": "#b0a898",
-      "--text-primary": "#2c2820",
-      "--text-muted": "#7a7468",
-      "--accent": "#d05020",
-      "--accent-alt": "#2080b0",
-      "--success": "#2a8848",
-      "--warning": "#b08820",
-      "--danger": "#c03030",
-      "--overlay": "rgba(250, 248, 245, 0.85)",
-      "--shadow": "rgba(44, 40, 32, 0.12)",
-      "--stripe-a": "rgba(208, 80, 32, 0.04)",
-      "--stripe-b": "rgba(32, 128, 176, 0.04)"
+      "--surface": "#f4f4f5", "--surface-hover": "#e8e8ea", "--background": "#fafafa",
+      "--panel": "#f4f4f5", "--border": "#e0e0e4", "--border-active": "#09090b99",
+      "--text-primary": "#09090b", "--text-secondary": "#3f3f46", "--text-muted": "#71717a",
+      "--accent-blue": "#2563eb", "--accent-cyan": "#0891b2", "--accent-green": "#16a34a",
+      "--accent-yellow": "#ca8a04", "--accent-red": "#dc2626", "--accent-magenta": "#7c3aed"
     }
   },
   {
@@ -581,23 +465,11 @@ export const THEMES: ThemeDefinition[] = [
     description: "Cool gray-white with blue-gray accents.",
     kind: "light",
     vars: {
-      "--bg-root": "#f5f6f8",
-      "--bg-shell": "#eceef2",
-      "--bg-panel": "#e3e6ec",
-      "--bg-raised": "#dadde5",
-      "--border-soft": "#c4c8d4",
-      "--border-strong": "#9fa5b5",
-      "--text-primary": "#1e2230",
-      "--text-muted": "#5e6578",
-      "--accent": "#3868b8",
-      "--accent-alt": "#8840b8",
-      "--success": "#228855",
-      "--warning": "#a88820",
-      "--danger": "#c83838",
-      "--overlay": "rgba(245, 246, 248, 0.85)",
-      "--shadow": "rgba(30, 34, 48, 0.10)",
-      "--stripe-a": "rgba(56, 104, 184, 0.04)",
-      "--stripe-b": "rgba(136, 64, 184, 0.03)"
+      "--surface": "#f5eed8", "--surface-hover": "#ece0c4", "--background": "#fdf8f0",
+      "--panel": "#f5eed8", "--border": "#ddd0b8", "--border-active": "#16a34abf",
+      "--text-primary": "#1a1008", "--text-secondary": "#4a3020", "--text-muted": "#8a7060",
+      "--accent-blue": "#2563eb", "--accent-cyan": "#0891b2", "--accent-green": "#16a34a",
+      "--accent-yellow": "#d97706", "--accent-red": "#dc2626", "--accent-magenta": "#7c3aed"
     }
   },
   {
@@ -606,23 +478,11 @@ export const THEMES: ThemeDefinition[] = [
     description: "Warm golden light with earthy contrasts.",
     kind: "light",
     vars: {
-      "--bg-root": "#fdf8f0",
-      "--bg-shell": "#f5ede0",
-      "--bg-panel": "#ede4d4",
-      "--bg-raised": "#e5dbc8",
-      "--border-soft": "#d4c8b0",
-      "--border-strong": "#b8a888",
-      "--text-primary": "#302818",
-      "--text-muted": "#806838",
-      "--accent": "#c07020",
-      "--accent-alt": "#2888a0",
-      "--success": "#388830",
-      "--warning": "#b89020",
-      "--danger": "#c04030",
-      "--overlay": "rgba(253, 248, 240, 0.85)",
-      "--shadow": "rgba(48, 40, 24, 0.12)",
-      "--stripe-a": "rgba(192, 112, 32, 0.04)",
-      "--stripe-b": "rgba(40, 136, 160, 0.04)"
+      "--surface": "#eee8d5", "--surface-hover": "#ddd6c0", "--background": "#fdf6e3",
+      "--panel": "#eee8d5", "--border": "#d0caa8", "--border-active": "#268bd2bf",
+      "--text-primary": "#073642", "--text-secondary": "#586e75", "--text-muted": "#93a1a1",
+      "--accent-blue": "#268bd2", "--accent-cyan": "#2aa198", "--accent-green": "#859900",
+      "--accent-yellow": "#b58900", "--accent-red": "#dc322f", "--accent-magenta": "#d33682"
     }
   },
   {
@@ -631,23 +491,11 @@ export const THEMES: ThemeDefinition[] = [
     description: "Cold blue-white with icy accents.",
     kind: "light",
     vars: {
-      "--bg-root": "#f4f8fc",
-      "--bg-shell": "#e8f0f8",
-      "--bg-panel": "#dce6f2",
-      "--bg-raised": "#d0dcec",
-      "--border-soft": "#b8c8dc",
-      "--border-strong": "#8aa0c0",
-      "--text-primary": "#18283c",
-      "--text-muted": "#506882",
-      "--accent": "#2868c0",
-      "--accent-alt": "#a040c0",
-      "--success": "#1c7848",
-      "--warning": "#a08018",
-      "--danger": "#c02838",
-      "--overlay": "rgba(244, 248, 252, 0.85)",
-      "--shadow": "rgba(24, 40, 60, 0.10)",
-      "--stripe-a": "rgba(40, 104, 192, 0.04)",
-      "--stripe-b": "rgba(160, 64, 192, 0.03)"
+      "--surface": "#eff4ff", "--surface-hover": "#e3edff", "--background": "#f8fbff",
+      "--panel": "#eff4ff", "--border": "#c8daf8", "--border-active": "#2563ebbf",
+      "--text-primary": "#0f1c3f", "--text-secondary": "#344e88", "--text-muted": "#6680b0",
+      "--accent-blue": "#2563eb", "--accent-cyan": "#0891b2", "--accent-green": "#059669",
+      "--accent-yellow": "#d97706", "--accent-red": "#dc2626", "--accent-magenta": "#7c3aed"
     }
   },
   {
@@ -656,23 +504,11 @@ export const THEMES: ThemeDefinition[] = [
     description: "Creamy warm tone with subtle contrasts.",
     kind: "light",
     vars: {
-      "--bg-root": "#fcfaf4",
-      "--bg-shell": "#f6f2e8",
-      "--bg-panel": "#eeead8",
-      "--bg-raised": "#e6e2cc",
-      "--border-soft": "#d8d0b8",
-      "--border-strong": "#c0b490",
-      "--text-primary": "#2e2c20",
-      "--text-muted": "#78705a",
-      "--accent": "#b86830",
-      "--accent-alt": "#5080a8",
-      "--success": "#488038",
-      "--warning": "#b09028",
-      "--danger": "#b83838",
-      "--overlay": "rgba(252, 250, 244, 0.85)",
-      "--shadow": "rgba(46, 44, 32, 0.10)",
-      "--stripe-a": "rgba(184, 104, 48, 0.04)",
-      "--stripe-b": "rgba(80, 128, 168, 0.03)"
+      "--surface": "#f3efe8", "--surface-hover": "#e8e2d8", "--background": "#faf8f4",
+      "--panel": "#f3efe8", "--border": "#d8d0c0", "--border-active": "#b45309bf",
+      "--text-primary": "#1e1208", "--text-secondary": "#54402a", "--text-muted": "#9a8060",
+      "--accent-blue": "#2563eb", "--accent-cyan": "#0891b2", "--accent-green": "#16a34a",
+      "--accent-yellow": "#b45309", "--accent-red": "#dc2626", "--accent-magenta": "#7c3aed"
     }
   }
 ];
@@ -683,7 +519,7 @@ export const TEMPLATES: TemplateDescriptor[] = [
     name: "Quick Triage",
     description: "3 terminals, timeline focus, and lightweight file context.",
     defaultPanes: 3,
-    suggestedThemeId: "cobalt-grid",
+    suggestedThemeId: "bridgemind",
     categories: ["incident", "review"],
     bootCommands: ["git status", "npm run typecheck", "npm run build:web"]
   },
@@ -692,7 +528,7 @@ export const TEMPLATES: TemplateDescriptor[] = [
     name: "Release War Room",
     description: "8 terminals and broad visibility for ship checks.",
     defaultPanes: 8,
-    suggestedThemeId: "amber-circuit",
+    suggestedThemeId: "infrared",
     categories: ["release", "coordination"],
     bootCommands: [
       "git pull --ff-only",
@@ -708,7 +544,7 @@ export const TEMPLATES: TemplateDescriptor[] = [
     name: "Deep Debug",
     description: "12 terminals for parallel investigation and traces.",
     defaultPanes: 12,
-    suggestedThemeId: "emerald-scan",
+    suggestedThemeId: "hologram",
     categories: ["debug", "perf"],
     bootCommands: [
       "git status",

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, JSX } from "react";
+import type { JSX } from "react";
 import type { WorkspaceState } from "@shared/ipc";
 import { Compartment, EditorState } from "@codemirror/state";
 import { css as cssLanguage } from "@codemirror/lang-css";
@@ -150,28 +150,31 @@ const codeMirrorLanguageExtension = (language: string) => {
   }
 };
 
-const terminalTheme = {
-  background: "#0b1320",
-  foreground: "#dbefff",
-  cursor: "#00d8ff",
-  selectionBackground: "rgba(0, 216, 255, 0.2)",
-  black: "#09111c",
-  blue: "#3d8bff",
-  brightBlue: "#68b2ff",
-  brightBlack: "#31506d",
-  brightCyan: "#63eeff",
-  brightGreen: "#48f2b1",
-  brightMagenta: "#cf9eff",
-  brightRed: "#ff849e",
-  brightWhite: "#f6fbff",
-  brightYellow: "#ffd887",
-  cyan: "#2ac8d8",
-  green: "#13d688",
-  magenta: "#a178ff",
-  red: "#ff5c81",
-  white: "#cce7ff",
-  yellow: "#f4bf55"
-} satisfies ITerminalOptions["theme"];
+const TERMINAL_PALETTES: Record<string, ITerminalOptions["theme"]> = {
+  void: { background:"#040407",foreground:"#eef",cursor:"#6366f1",selectionBackground:"rgba(99,102,241,0.2)",black:"#0a0a10",red:"#f43f5e",green:"#34d399",yellow:"#fbbf24",blue:"#6366f1",magenta:"#e879f9",cyan:"#818cf8",white:"#eef",brightBlack:"#4a4a70",brightRed:"#fb7185",brightGreen:"#6ee7b7",brightYellow:"#fde68a",brightBlue:"#818cf8",brightMagenta:"#f0abfc",brightCyan:"#a5b4fc",brightWhite:"#f5f5ff" },
+  ghost: { background:"#080808",foreground:"#f0f0f2",cursor:"#10d5a9",selectionBackground:"rgba(16,213,169,0.2)",black:"#0f0f10",red:"#fb7185",green:"#86efac",yellow:"#fde68a",blue:"#60a5fa",magenta:"#c084fc",cyan:"#10d5a9",white:"#f0f0f2",brightBlack:"#3e3e50",brightRed:"#fda4af",brightGreen:"#bbf7d0",brightYellow:"#fef9c3",brightBlue:"#93c5fd",brightMagenta:"#d8b4fe",brightCyan:"#5eead4",brightWhite:"#fafafa" },
+  plasma: { background:"#070013",foreground:"#f4e8ff",cursor:"#e040fb",selectionBackground:"rgba(224,64,251,0.2)",black:"#0f0020",red:"#f43f5e",green:"#4ade80",yellow:"#fbbf24",blue:"#818cf8",magenta:"#e040fb",cyan:"#22d3ee",white:"#f4e8ff",brightBlack:"#6a3d90",brightRed:"#fb7185",brightGreen:"#86efac",brightYellow:"#fde68a",brightBlue:"#a5b4fc",brightMagenta:"#f0abfc",brightCyan:"#67e8f9",brightWhite:"#faf5ff" },
+  carbon: { background:"#101010",foreground:"#e8e8e8",cursor:"#f59e0b",selectionBackground:"rgba(245,158,11,0.2)",black:"#181818",red:"#ef4444",green:"#a3e635",yellow:"#f59e0b",blue:"#60a5fa",magenta:"#f97316",cyan:"#22d3ee",white:"#e8e8e8",brightBlack:"#606060",brightRed:"#f87171",brightGreen:"#bef264",brightYellow:"#fbbf24",brightBlue:"#93c5fd",brightMagenta:"#fb923c",brightCyan:"#67e8f9",brightWhite:"#f5f5f5" },
+  hex: { background:"#030803",foreground:"#cfc",cursor:"#00ff41",selectionBackground:"rgba(0,255,65,0.2)",black:"#060f06",red:"#f44",green:"#00ff41",yellow:"#cf0",blue:"#0af",magenta:"#4f8",cyan:"#0d5",white:"#cfc",brightBlack:"#286628",brightRed:"#f66",brightGreen:"#5f5",brightYellow:"#df2",brightBlue:"#4cf",brightMagenta:"#6fa",brightCyan:"#3e8",brightWhite:"#efe" },
+  "neon-tokyo": { background:"#0a0014",foreground:"#ffe8ff",cursor:"#ff0080",selectionBackground:"rgba(255,0,128,0.2)",black:"#12001e",red:"#ff0080",green:"#39ff14",yellow:"#ff0",blue:"#0ff",magenta:"#f0f",cyan:"#00e0ff",white:"#ffe8ff",brightBlack:"#63a",brightRed:"#ff4da6",brightGreen:"#7fff5e",brightYellow:"#ff6",brightBlue:"#6ff",brightMagenta:"#f6f",brightCyan:"#4ddbff",brightWhite:"#fff0ff" },
+  obsidian: { background:"#06040e",foreground:"#e8e0ff",cursor:"#8b5cf6",selectionBackground:"rgba(139,92,246,0.2)",black:"#0d0a1a",red:"#f87171",green:"#86efac",yellow:"#fbbf24",blue:"#818cf8",magenta:"#8b5cf6",cyan:"#34d399",white:"#e8e0ff",brightBlack:"#4a3880",brightRed:"#fca5a5",brightGreen:"#bbf7d0",brightYellow:"#fde68a",brightBlue:"#a5b4fc",brightMagenta:"#a78bfa",brightCyan:"#6ee7b7",brightWhite:"#f5f3ff" },
+  nebula: { background:"#030010",foreground:"#f0e8ff",cursor:"#c084fc",selectionBackground:"rgba(192,132,252,0.2)",black:"#060020",red:"#f472b6",green:"#34d399",yellow:"#fbbf24",blue:"#818cf8",magenta:"#c084fc",cyan:"#67e8f9",white:"#f0e8ff",brightBlack:"#5a3080",brightRed:"#f9a8d4",brightGreen:"#6ee7b7",brightYellow:"#fde68a",brightBlue:"#a5b4fc",brightMagenta:"#d8b4fe",brightCyan:"#a5f3fc",brightWhite:"#faf5ff" },
+  storm: { background:"#0c1016",foreground:"#e8eef8",cursor:"#fde047",selectionBackground:"rgba(253,224,71,0.2)",black:"#131b24",red:"#f87171",green:"#4ade80",yellow:"#fde047",blue:"#60a5fa",magenta:"#f472b6",cyan:"#22d3ee",white:"#e8eef8",brightBlack:"#456",brightRed:"#fca5a5",brightGreen:"#86efac",brightYellow:"#fef08a",brightBlue:"#93c5fd",brightMagenta:"#f9a8d4",brightCyan:"#67e8f9",brightWhite:"#f0f4ff" },
+  infrared: { background:"#0c0200",foreground:"#fff4ee",cursor:"#ff6b35",selectionBackground:"rgba(255,107,53,0.2)",black:"#1a0500",red:"#dc2626",green:"#a3e635",yellow:"#ff6b35",blue:"#fb923c",magenta:"#f97316",cyan:"#fbbf24",white:"#fff4ee",brightBlack:"#7a3a22",brightRed:"#ef4444",brightGreen:"#bef264",brightYellow:"#fb923c",brightBlue:"#fdba74",brightMagenta:"#fb923c",brightCyan:"#fde68a",brightWhite:"#fffbeb" },
+  nova: { background:"#050208",foreground:"#fff8f0",cursor:"#f97316",selectionBackground:"rgba(249,115,22,0.2)",black:"#0c0312",red:"#ef4444",green:"#4ade80",yellow:"#fbbf24",blue:"#818cf8",magenta:"#f97316",cyan:"#22d3ee",white:"#fff8f0",brightBlack:"#705040",brightRed:"#f87171",brightGreen:"#86efac",brightYellow:"#fde68a",brightBlue:"#a5b4fc",brightMagenta:"#fb923c",brightCyan:"#67e8f9",brightWhite:"#fffbeb" },
+  stealth: { background:"#0d0f0f",foreground:"#c8d8d0",cursor:"#34d399",selectionBackground:"rgba(52,211,153,0.2)",black:"#141818",red:"#dc2626",green:"#84cc16",yellow:"#a3a046",blue:"#4d9e8e",magenta:"#64748b",cyan:"#34d399",white:"#c8d8d0",brightBlack:"#384840",brightRed:"#ef4444",brightGreen:"#a3e635",brightYellow:"#bef264",brightBlue:"#6ee7b7",brightMagenta:"#94a3b8",brightCyan:"#6ee7b7",brightWhite:"#e2e8f0" },
+  hologram: { background:"#020810",foreground:"#e0f6ff",cursor:"#00d4ff",selectionBackground:"rgba(0,212,255,0.2)",black:"#04101e",red:"#f87171",green:"#34d399",yellow:"#fbbf24",blue:"#00d4ff",magenta:"#a78bfa",cyan:"#38bdf8",white:"#e0f6ff",brightBlack:"#2a6888",brightRed:"#fca5a5",brightGreen:"#6ee7b7",brightYellow:"#fde68a",brightBlue:"#7dd3fc",brightMagenta:"#c4b5fd",brightCyan:"#7dd3fc",brightWhite:"#f0f9ff" },
+  dracula: { background:"#1a1b2e",foreground:"#f8f8f2",cursor:"#bd93f9",selectionBackground:"rgba(189,147,249,0.2)",black:"#24253a",red:"#ff5555",green:"#50fa7b",yellow:"#f1fa8c",blue:"#8be9fd",magenta:"#ff79c6",cyan:"#8be9fd",white:"#f8f8f2",brightBlack:"#6272a4",brightRed:"#ff6e6e",brightGreen:"#69ff94",brightYellow:"#ffffa5",brightBlue:"#a4ffff",brightMagenta:"#ff92df",brightCyan:"#a4ffff",brightWhite:"#ffffff" },
+  bridgemind: { background:"#030508",foreground:"#eef2ff",cursor:"#00e5ff",selectionBackground:"rgba(0,229,255,0.2)",black:"#080c14",red:"#ff3370",green:"#10ffb0",yellow:"#fc0",blue:"#3b82f6",magenta:"#bf5af2",cyan:"#00e5ff",white:"#eef2ff",brightBlack:"#3a5070",brightRed:"#ff6699",brightGreen:"#5fffc8",brightYellow:"#ffd54f",brightBlue:"#60a5fa",brightMagenta:"#d084f7",brightCyan:"#4dffff",brightWhite:"#f8faff" },
+  paper: { background:"#fafafa",foreground:"#09090b",cursor:"#2563eb",selectionBackground:"rgba(37,99,235,0.15)",black:"#09090b",red:"#dc2626",green:"#16a34a",yellow:"#ca8a04",blue:"#2563eb",magenta:"#7c3aed",cyan:"#0891b2",white:"#fafafa",brightBlack:"#71717a",brightRed:"#ef4444",brightGreen:"#22c55e",brightYellow:"#eab308",brightBlue:"#3b82f6",brightMagenta:"#8b5cf6",brightCyan:"#06b6d4",brightWhite:"#ffffff" },
+  chalk: { background:"#fdf8f0",foreground:"#1a1008",cursor:"#16a34a",selectionBackground:"rgba(22,163,74,0.15)",black:"#1a1008",red:"#dc2626",green:"#16a34a",yellow:"#d97706",blue:"#2563eb",magenta:"#7c3aed",cyan:"#0891b2",white:"#fdf8f0",brightBlack:"#8a7060",brightRed:"#ef4444",brightGreen:"#22c55e",brightYellow:"#f59e0b",brightBlue:"#3b82f6",brightMagenta:"#8b5cf6",brightCyan:"#06b6d4",brightWhite:"#ffffff" },
+  solar: { background:"#fdf6e3",foreground:"#073642",cursor:"#268bd2",selectionBackground:"rgba(38,139,210,0.15)",black:"#073642",red:"#dc322f",green:"#859900",yellow:"#b58900",blue:"#268bd2",magenta:"#d33682",cyan:"#2aa198",white:"#eee8d5",brightBlack:"#93a1a1",brightRed:"#cb4b16",brightGreen:"#586e75",brightYellow:"#657b83",brightBlue:"#839496",brightMagenta:"#6c71c4",brightCyan:"#2aa198",brightWhite:"#fdf6e3" },
+  arctic: { background:"#f8fbff",foreground:"#0f1c3f",cursor:"#2563eb",selectionBackground:"rgba(37,99,235,0.15)",black:"#0f1c3f",red:"#dc2626",green:"#059669",yellow:"#d97706",blue:"#2563eb",magenta:"#7c3aed",cyan:"#0891b2",white:"#f8fbff",brightBlack:"#6680b0",brightRed:"#ef4444",brightGreen:"#10b981",brightYellow:"#f59e0b",brightBlue:"#3b82f6",brightMagenta:"#8b5cf6",brightCyan:"#06b6d4",brightWhite:"#ffffff" },
+  ivory: { background:"#faf8f4",foreground:"#1e1208",cursor:"#b45309",selectionBackground:"rgba(180,83,9,0.15)",black:"#1e1208",red:"#dc2626",green:"#16a34a",yellow:"#b45309",blue:"#2563eb",magenta:"#7c3aed",cyan:"#0891b2",white:"#faf8f4",brightBlack:"#9a8060",brightRed:"#ef4444",brightGreen:"#22c55e",brightYellow:"#d97706",brightBlue:"#3b82f6",brightMagenta:"#8b5cf6",brightCyan:"#06b6d4",brightWhite:"#ffffff" }
+};
+
+const getTerminalTheme = (id: string): ITerminalOptions["theme"] =>
+  TERMINAL_PALETTES[id] ?? TERMINAL_PALETTES.bridgemind;
 
 const createTimelineEvent = (
   title: string,
@@ -628,14 +631,14 @@ const SettingsView = ({ activeThemeId, themes, onThemeChange }: SettingsViewProp
       onClick={() => onThemeChange(theme.id)}
       type="button"
     >
-      <div className={`theme-preview ${theme.kind}`} style={{ background: theme.vars["--bg-root"] }}>
+      <div className={`theme-preview ${theme.kind}`} style={{ background: theme.vars["--background"] }}>
         <div className="preview-dots">
-          <span style={{ background: theme.vars["--danger"] }} />
-          <span style={{ background: theme.vars["--warning"] }} />
-          <span style={{ background: theme.vars["--success"] }} />
+          <span style={{ background: theme.vars["--accent-red"] }} />
+          <span style={{ background: theme.vars["--accent-yellow"] }} />
+          <span style={{ background: theme.vars["--accent-green"] }} />
         </div>
         <div className="preview-lines">
-          <span style={{ background: theme.vars["--accent"], width: "55%" }} />
+          <span style={{ background: theme.vars["--accent-blue"], width: "55%" }} />
           <span style={{ background: theme.vars["--text-muted"], width: "35%" }} />
         </div>
       </div>
@@ -842,18 +845,18 @@ const SettingsView = ({ activeThemeId, themes, onThemeChange }: SettingsViewProp
 const codeEditorTheme = EditorView.theme(
   {
     "&": {
-      background: "color-mix(in srgb, var(--bg-shell) 86%, black 14%)",
-      border: "1px solid var(--border-soft)",
+      background: "color-mix(in srgb, var(--surface) 86%, black 14%)",
+      border: "1px solid var(--border)",
       borderRadius: "0.65rem",
       color: "var(--text-primary)",
       flex: "1",
-      fontFamily: '"IBM Plex Mono", "Consolas", monospace',
+      fontFamily: '"JetBrains Mono", "IBM Plex Mono", "Consolas", monospace',
       fontSize: "0.8rem",
       minHeight: "0",
       overflow: "hidden"
     },
     "&.cm-editor.cm-focused": {
-      borderColor: "var(--accent)",
+      borderColor: "var(--accent-blue)",
       outline: "none"
     },
     ".cm-content": {
@@ -862,7 +865,7 @@ const codeEditorTheme = EditorView.theme(
       padding: "0.65rem 0.7rem"
     },
     ".cm-gutters": {
-      background: "color-mix(in srgb, var(--bg-shell) 82%, black 18%)",
+      background: "color-mix(in srgb, var(--surface) 82%, black 18%)",
       border: "none",
       color: "var(--text-muted)"
     },
@@ -1009,7 +1012,7 @@ function App(): JSX.Element {
     () => THEMES.find((theme) => theme.id === themeId) ?? THEMES[0],
     [themeId]
   );
-  const themeStyle = activeTheme.vars as CSSProperties;
+  const themeClassName = `theme-${themeId}`;
 
   useEffect(() => {
     try {
@@ -1203,11 +1206,13 @@ function App(): JSX.Element {
           return sessionId;
         })
         .catch((error) => {
+          const msg = error instanceof Error ? error.message : String(error);
+          console.error(`[ensurePaneSession] ${paneId} failed:`, error);
           updatePane(paneId, (pane) => ({
             ...pane,
             sessionId: undefined,
             status: "error",
-            outputPreview: "Failed to create terminal session."
+            outputPreview: `Terminal error: ${msg}`
           }));
           throw error;
         })
@@ -1265,9 +1270,12 @@ function App(): JSX.Element {
         allowProposedApi: true,
         convertEol: true,
         cursorBlink: true,
-        fontFamily: "IBM Plex Mono, Consolas, monospace",
-        fontSize: 12,
-        theme: terminalTheme
+        cursorStyle: "block",
+        fontFamily: '"JetBrains Mono", "SF Mono", Menlo, Monaco, monospace',
+        fontSize: 14,
+        lineHeight: 1.2,
+        scrollback: 10000,
+        theme: getTerminalTheme(themeId)
       });
       const fitAddon = new FitAddon();
       terminal.loadAddon(fitAddon);
@@ -1322,8 +1330,16 @@ function App(): JSX.Element {
       resizePaneTerminal(paneId);
       void ensurePaneSession(paneId);
     },
-    [ensurePaneSession, resizePaneTerminal, updatePane]
+    [ensurePaneSession, resizePaneTerminal, updatePane, themeId]
   );
+
+  // Update terminal palettes when theme changes
+  useEffect(() => {
+    const palette = getTerminalTheme(themeId);
+    for (const [, runtime] of terminalRuntimesRef.current) {
+      runtime.terminal.options.theme = palette;
+    }
+  }, [themeId]);
 
   useEffect(() => {
     const visiblePaneIds = new Set(visibleTerminals.map((pane) => pane.id));
@@ -1651,7 +1667,7 @@ function App(): JSX.Element {
   };
 
   return (
-    <div className="openspace-app openspace-shell-exact" style={themeStyle}>
+    <div className={`openspace-app openspace-shell-exact ${themeClassName}`}>
       <div aria-hidden className="shell-background" />
 
       <header className="shell-topbar">

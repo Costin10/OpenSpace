@@ -12,6 +12,9 @@ import type {
   TerminalWriteRequest,
   WorkspaceState
 } from "@shared/ipc";
+import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { listen as tauriListen } from "@tauri-apps/api/event";
+import { open as tauriDialogOpen } from "@tauri-apps/plugin-dialog";
 import type { KanbanCard } from "../types/ui";
 
 type InvokeArgs = Record<string, unknown> | undefined;
@@ -25,11 +28,6 @@ type ListenEvent<T> = {
 type ListenFn = <T>(event: string, handler: (event: ListenEvent<T>) => void) => Promise<UnlistenFn>;
 type TerminalOutputListener = (payload: TerminalOutputEvent) => void;
 type TerminalExitListener = (payload: TerminalExitEvent) => void;
-
-const TAURI_MODULES = {
-  core: "@tauri-apps/api/core",
-  event: "@tauri-apps/api/event"
-} as const;
 
 /**
  * Expected Tauri backend contract (primary command names listed first):
@@ -123,52 +121,14 @@ const loadInvoke = async (): Promise<InvokeFn | null> => {
   if (!hasTauriRuntime()) {
     return null;
   }
-
-  if (!invokePromise) {
-    invokePromise = (async () => {
-      try {
-        const coreApi = (await import(
-          /* @vite-ignore */ TAURI_MODULES.core
-        )) as { invoke?: InvokeFn };
-        if (typeof coreApi.invoke !== "function") {
-          console.error("Tauri core API loaded without invoke()");
-          return null;
-        }
-        return coreApi.invoke;
-      } catch (error) {
-        console.error("Unable to load @tauri-apps/api/core", error);
-        return null;
-      }
-    })();
-  }
-
-  return invokePromise;
+  return tauriInvoke as unknown as InvokeFn;
 };
 
 const loadListen = async (): Promise<ListenFn | null> => {
   if (!hasTauriRuntime()) {
     return null;
   }
-
-  if (!listenPromise) {
-    listenPromise = (async () => {
-      try {
-        const eventApi = (await import(
-          /* @vite-ignore */ TAURI_MODULES.event
-        )) as { listen?: ListenFn };
-        if (typeof eventApi.listen !== "function") {
-          console.error("Tauri event API loaded without listen()");
-          return null;
-        }
-        return eventApi.listen;
-      } catch (error) {
-        console.error("Unable to load @tauri-apps/api/event", error);
-        return null;
-      }
-    })();
-  }
-
-  return listenPromise;
+  return tauriListen as unknown as ListenFn;
 };
 
 const invokeCommand = async <T>(command: string, args?: InvokeArgs): Promise<T> => {
@@ -326,28 +286,13 @@ export const rendererBridge: RendererBridge = {
     }
 
     try {
-      const dialogModule = (await import(
-        /* @vite-ignore */ "@tauri-apps/plugin-dialog"
-      )) as { open?: (options: Record<string, unknown>) => Promise<string | string[] | null> };
-
-      if (typeof dialogModule.open !== "function") {
-        console.error("dialog plugin missing open()");
-        return null;
-      }
-
-      const result = await dialogModule.open({
+      const result = await tauriDialogOpen({
         directory: true,
         multiple: false,
         title: "Select workspace folder"
       });
 
-      if (typeof result === "string") {
-        return result;
-      }
-      if (Array.isArray(result) && result.length > 0) {
-        return result[0];
-      }
-      return null;
+      return typeof result === "string" ? result : null;
     } catch (error) {
       console.error("pickFolder failed", error);
       return null;
