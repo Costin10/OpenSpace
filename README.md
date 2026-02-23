@@ -76,6 +76,8 @@ npm install
 npm run dev
 ```
 
+> **Note:** `npm run dev` now serves the exact prebuilt BridgeSpace frontend from `bridgespace-bundle/`. No Vite rebundle runs in this path.
+
 ### Launcher (`openspace .`)
 
 ```bash
@@ -94,11 +96,15 @@ Notes:
 npm run build
 ```
 
+`npm run build` also skips Vite and packages the exact `bridgespace-bundle/` files into the Tauri app. Replace that folder's contents when you want to update the cloned frontend, then rerun the command.
+
 ### Useful Scripts
 
 ```bash
 npm run dev:web
+npm run dev:web:vite
 npm run build:web
+npm run build:web:vite
 npm run preview
 npm run typecheck
 ```

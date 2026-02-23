@@ -8,10 +8,12 @@
   },
   "scripts": {
     "dev": "tauri dev",
-    "dev:web": "vite --config vite.config.ts",
+    "dev:web": "python3 -m http.server 1420 --directory bridgespace-bundle",
+    "dev:web:vite": "vite --config vite.config.ts",
     "build": "npm run typecheck && tauri build",
-    "build:web": "vite build --config vite.config.ts",
-    "preview": "vite preview --config vite.config.ts",
+    "build:web": "rm -rf dist && mkdir -p dist && cp -a bridgespace-bundle/. dist/",
+    "build:web:vite": "vite build --config vite.config.ts",
+    "preview": "python3 -m http.server 4173 --directory dist",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
   },
   "dependencies": {
