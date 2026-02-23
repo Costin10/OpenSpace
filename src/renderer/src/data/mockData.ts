@@ -331,7 +331,8 @@ export const TEMPLATES: TemplateDescriptor[] = [
     description: "3 terminals, timeline focus, and lightweight file context.",
     defaultPanes: 3,
     suggestedThemeId: "cobalt-grid",
-    categories: ["incident", "review"]
+    categories: ["incident", "review"],
+    bootCommands: ["git status", "npm run typecheck", "npm run build:web"]
   },
   {
     id: "release-war-room",
@@ -339,7 +340,15 @@ export const TEMPLATES: TemplateDescriptor[] = [
     description: "8 terminals and broad visibility for ship checks.",
     defaultPanes: 8,
     suggestedThemeId: "amber-circuit",
-    categories: ["release", "coordination"]
+    categories: ["release", "coordination"],
+    bootCommands: [
+      "git pull --ff-only",
+      "npm ci",
+      "npm run typecheck",
+      "npm run build",
+      "npm run test",
+      "cargo check --manifest-path src-tauri/Cargo.toml"
+    ]
   },
   {
     id: "deep-debug",
@@ -347,6 +356,14 @@ export const TEMPLATES: TemplateDescriptor[] = [
     description: "12 terminals for parallel investigation and traces.",
     defaultPanes: 12,
     suggestedThemeId: "emerald-scan",
-    categories: ["debug", "perf"]
+    categories: ["debug", "perf"],
+    bootCommands: [
+      "git status",
+      "npm run dev:web",
+      "npm run typecheck -- --watch",
+      "cargo check --manifest-path src-tauri/Cargo.toml",
+      "tail -f ./logs/app.log",
+      "rg --line-number TODO src"
+    ]
   }
 ];

@@ -75,4 +75,5 @@ export interface TemplateDescriptor {
   defaultPanes: number;
   suggestedThemeId: string;
   categories: string[];
+  bootCommands: string[];
 }

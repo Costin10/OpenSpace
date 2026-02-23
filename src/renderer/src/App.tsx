@@ -168,6 +168,11 @@ const slugFromPath = (path: string): string =>
     .join("-")
     .toLowerCase();
 
+const waitFor = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+
 const tabsFromWorkspaceState = (state: WorkspaceState): WorkspaceTab[] => {
   const sources = state.recentPaths.length > 0 ? state.recentPaths : state.rootPath ? [state.rootPath] : [];
   if (sources.length === 0) {
@@ -343,6 +348,7 @@ const TemplatePickerModal = ({
             <div className="template-meta">
               <span>{template.defaultPanes} panes</span>
               <span>{themeMap[template.suggestedThemeId] ?? template.suggestedThemeId}</span>
+              <span>{template.bootCommands.length} boot commands</span>
             </div>
             <div className="template-tags">
               {template.categories.map((tag) => (
@@ -677,7 +683,16 @@ function App(): JSX.Element {
         return inFlight;
       }
 
-      const runtime = terminalRuntimesRef.current.get(paneId);
+      let runtime = terminalRuntimesRef.current.get(paneId);
+      if (!runtime) {
+        for (let attempt = 0; attempt < 24; attempt += 1) {
+          await waitFor(50);
+          runtime = terminalRuntimesRef.current.get(paneId);
+          if (runtime) {
+            break;
+          }
+        }
+      }
       if (!runtime) {
         throw new Error(`terminal runtime missing for ${paneId}`);
       }
@@ -1021,13 +1036,13 @@ function App(): JSX.Element {
     }));
   };
 
-  const handleRunPaneCommand = async (paneId: string): Promise<void> => {
+  const handleRunPaneCommand = async (paneId: string, commandOverride?: string): Promise<void> => {
     const pane = terminalPanes.find((candidate) => candidate.id === paneId);
     if (!pane) {
       return;
     }
 
-    const command = pane.command.trim();
+    const command = (commandOverride ?? pane.command).trim();
     if (!command) {
       return;
     }
@@ -1041,7 +1056,12 @@ function App(): JSX.Element {
     try {
       const sessionId = await ensurePaneSession(paneId);
       await rendererBridge.writeTerminal(sessionId, `${command}\n`);
-      appendTimeline("Run command", `${pane.label} | session ${sessionId}`, command, "running");
+      updatePane(paneId, (current) => ({
+        ...current,
+        status: "success",
+        outputPreview: `Dispatched on session ${sessionId}`
+      }));
+      appendTimeline("Run command", `${pane.label} | session ${sessionId}`, command, "success");
     } catch (error) {
       console.error(`run command failed for ${paneId}`, error);
       updatePane(paneId, (current) => ({
@@ -1067,9 +1087,35 @@ function App(): JSX.Element {
 
   const handleApplyTemplate = (template: TemplateDescriptor): void => {
     const paneCount = Math.max(1, Math.min(MAX_TERMINAL_PANES, template.defaultPanes));
+    const seedCommands =
+      template.bootCommands.length > 0 ? template.bootCommands : ["git status", "npm run typecheck", "npm run build:web"];
+
+    setTerminalPanes((previous) =>
+      previous.map((pane, index) =>
+        index < paneCount
+          ? {
+              ...pane,
+              command: seedCommands[index % seedCommands.length]
+            }
+          : pane
+      )
+    );
+
     setThemeId(template.suggestedThemeId);
     setTerminalPaneCount(paneCount);
     setTemplateModalOpen(false);
+    appendTimeline("Apply template", template.name, `template:${template.id}`, "success");
+
+    seedCommands.slice(0, paneCount).forEach((command, index) => {
+      const paneId = `terminal-${index + 1}`;
+      window.setTimeout(() => {
+        updatePane(paneId, (current) => ({
+          ...current,
+          command
+        }));
+        void handleRunPaneCommand(paneId, command);
+      }, 220 * (index + 1));
+    });
   };
 
   return (

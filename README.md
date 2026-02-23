@@ -20,6 +20,7 @@ OpenSpace aims to make that model native by giving developers a single place to:
 - **Agent spawning and orchestration (in progress)**: foundation for managing multiple autonomous coding flows.
 - **Lightweight editor**: quick file read/write for iterative tweaks and patch-style work.
 - **Command blocks timeline**: reusable command actions for build/test/deploy loops.
+- **Template boot flows**: apply a template to set pane count, preload command presets, and auto-dispatch startup commands.
 - **Kanban task board**: move work from Todo to Complete directly inside the dev environment.
 - **Workspace persistence**: remember recent roots and task state between sessions.
 - **Linux-first runtime contract**: explicit Linux support and PTY-first process model.
@@ -94,6 +95,7 @@ npm run typecheck
 
 - [x] Replace placeholder terminal cards with full xterm rendering per pane.
 - [x] Replace plain textarea with embedded code editor.
+- [x] Add template-driven terminal boot command presets.
 - [ ] Add first-class agent runtime APIs (spawn, stop, inspect, route output).
 - [ ] Orchestration graph for agent-to-agent handoff and task delegation.
 - [ ] Command block library with saved presets and workspace sharing.
